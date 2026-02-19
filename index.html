@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Deudas Municipales</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SheetJS para Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Gestión de Deudas</h1>
+        
+        <div class="upload-section">
+            <h2>Cargar archivo Excel</h2>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" />
+            <button onclick="cargarExcel()">Cargar Datos</button>
+        </div>
+
+        <div class="search-section">
+            <h2>Buscar Deuda</h2>
+            <input type="text" id="searchInput" placeholder="Número de causa (ej: AUT/3163/2021)" />
+            <button onclick="buscarDeuda()">Buscar</button>
+        </div>
+
+        <div class="config-section">
+            <h2>Configurar Vista</h2>
+            <label><input type="checkbox" id="showEstado" checked> Estado</label>
+            <label><input type="checkbox" id="showNombre" checked> Nombre y CUIT</label>
+            <label><input type="checkbox" id="showMonto" checked> Monto</label>
+            <label><input type="checkbox" id="showNotas" checked> Último movimiento</label>
+        </div>
+
+        <div id="resultados"></div>
+        
+        <div class="export-section">
+            <button onclick="exportarExcel()">Exportar a Excel</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
