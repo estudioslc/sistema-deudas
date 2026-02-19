@@ -38,7 +38,8 @@
         const SUPABASE_URL = 'https://jigyfagcxaifgdogaduf.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTQ1NDcsImV4cCI6MjA4NzA3MDU0N30.zreu5LPBTgmITGiAGrwEAky6RvIaXjFr3E6sXcK0Olw';
         
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // USAMOS 'supabaseClient' EN LUGAR DE 'supabase' PARA EVITAR CONFLICTO
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         const fileInput = document.getElementById('fileInput');
         const cargarBtn = document.getElementById('cargarBtn');
@@ -75,7 +76,6 @@
         // Mapear datos del Excel a la estructura de Supabase
         function mapearDatos(jsonData) {
             return jsonData.map((row, index) => {
-                // Función auxiliar para buscar columnas sin importar mayúsculas/minúsculas
                 const getValor = (nombreExacto, alternativas = []) => {
                     if (row[nombreExacto] !== undefined) return row[nombreExacto];
                     for (let alt of alternativas) {
@@ -204,7 +204,8 @@
                 for (let i = 0; i < datosExcel.length; i += batchSize) {
                     const batch = datosExcel.slice(i, i + batchSize);
                     
-                    const { data, error } = await supabase
+                    // USAMOS 'supabaseClient' EN LUGAR DE 'supabase'
+                    const { data, error } = await supabaseClient
                         .from('deudas')
                         .insert(batch)
                         .select();
