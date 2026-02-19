@@ -2,45 +2,244 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Deudas Municipales</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Supabase SDK -->
+    <title>Sistema de Deudas</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SheetJS para Excel -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
+        button { padding: 12px 24px; background: #007bff; color: white; border: none; cursor: pointer; margin: 10px 5px; border-radius: 5px; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .exito { color: #155724; background: #d4edda; padding: 15px; border-radius: 5px; border: 1px solid #c3e6cb; }
+        .error { color: #721c24; background: #f8d7da; padding: 15px; border-radius: 5px; border: 1px solid #f5c6cb; }
+        .info { color: #856404; background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeaa7; }
+        .preview { margin-top: 20px; overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; font-size: 12px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .columnas-encontradas { background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 12px; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Sistema de Gestión de Deudas</h1>
+    <h1>📁 Cargar Deudas desde Excel</h1>
+    
+    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+    <button id="cargarBtn">Cargar Datos</button>
+    <button id="vistaPreviaBtn" style="background: #6c757d;">Vista Previa</button>
+    
+    <div id="mensaje"></div>
+    <div id="preview"></div>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN SUPABASE
+        // ==========================================
+        const SUPABASE_URL = 'https://jigyfagcxaifgdogaduf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTQ1NDcsImV4cCI6MjA4NzA3MDU0N30.zreu5LPBTgmITGiAGrwEAky6RvIaXjFr3E6sXcK0Olw';
         
-        <div class="upload-section">
-            <h2>Cargar archivo Excel</h2>
-            <input type="file" id="fileInput" accept=".xlsx,.xls" />
-            <button onclick="cargarExcel()">Cargar Datos</button>
-        </div>
-
-        <div class="search-section">
-            <h2>Buscar Deuda</h2>
-            <input type="text" id="searchInput" placeholder="Número de causa (ej: AUT/3163/2021)" />
-            <button onclick="buscarDeuda()">Buscar</button>
-        </div>
-
-        <div class="config-section">
-            <h2>Configurar Vista</h2>
-            <label><input type="checkbox" id="showEstado" checked> Estado</label>
-            <label><input type="checkbox" id="showNombre" checked> Nombre y CUIT</label>
-            <label><input type="checkbox" id="showMonto" checked> Monto</label>
-            <label><input type="checkbox" id="showNotas" checked> Último movimiento</label>
-        </div>
-
-        <div id="resultados"></div>
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        <div class="export-section">
-            <button onclick="exportarExcel()">Exportar a Excel</button>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
+        const fileInput = document.getElementById('fileInput');
+        const cargarBtn = document.getElementById('cargarBtn');
+        const vistaPreviaBtn = document.getElementById('vistaPreviaBtn');
+        const mensaje = document.getElementById('mensaje');
+        const preview = document.getElementById('preview');
+        
+        let datosExcel = [];
+        
+        function mostrarMensaje(texto, tipo = 'info') {
+            mensaje.innerHTML = `<div class="${tipo}">${texto}</div>`;
+        }
+        
+        // Función para leer el Excel
+        function leerExcel(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        resolve(jsonData);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        // Mapear datos del Excel a la estructura de Supabase
+        function mapearDatos(jsonData) {
+            return jsonData.map((row, index) => {
+                // Función auxiliar para buscar columnas sin importar mayúsculas/minúsculas
+                const getValor = (nombreExacto, alternativas = []) => {
+                    if (row[nombreExacto] !== undefined) return row[nombreExacto];
+                    for (let alt of alternativas) {
+                        if (row[alt] !== undefined) return row[alt];
+                    }
+                    const keys = Object.keys(row);
+                    for (let key of keys) {
+                        if (key.toLowerCase() === nombreExacto.toLowerCase()) {
+                            return row[key];
+                        }
+                    }
+                    return null;
+                };
+                
+                return {
+                    jud_id: getValor('Jud_id', ['JUD_ID', 'jud_id', 'ID']),
+                    expediente: getValor('Expediente', ['EXPEDIENTE', 'expediente']),
+                    caratula: getValor('Caratula', ['CARATULA', 'caratula']),
+                    nominal: getValor('Nominal', ['NOMINAL', 'nominal']),
+                    accesorios: getValor('Accesorios', ['ACCESORIOS', 'accesorios']),
+                    multa: getValor('Multa', ['MULTA', 'multa']),
+                    obj_id: getValor('Obj_id', ['OBJ_ID', 'obj_id']),
+                    tipo_obj: getValor('Tipo_Obj', ['TIPO_OBJ', 'tipo_obj', 'Tipo_obj']),
+                    identificador: getValor('Identificador', ['IDENTIFICADOR', 'identificador']),
+                    titular: getValor('Titular', ['TITULAR', 'titular']),
+                    cuit: getValor('CUIT', ['cuit', 'Cuit']),
+                    telefono: getValor('Telefono', ['TELEFONO', 'telefono', 'Teléfono', 'TELEFÓFONO']),
+                    mail: getValor('Mail', ['MAIL', 'mail', 'Email', 'EMAIL', 'Correo']),
+                    regimen: getValor('Regimen', ['REGIMEN', 'regimen', 'Régimen', 'RÉGIMEN']),
+                    anio_fab: getValor('Anio_Fab', ['ANIO_FAB', 'anio_fab', 'Año_Fab', 'AÑO_FAB']),
+                    valor_rodado: getValor('Valor_Rodado', ['VALOR_RODADO', 'valor_rodado']),
+                    causa: getValor('Causa', ['CAUSA', 'causa']),
+                    fch_infrac: getValor('FchInfrac', ['FCHINFRAC', 'fchinfrac', 'Fecha_Infrac', 'FECHA_INFRAC']),
+                    hora_infrac: getValor('Hora_Infrac', ['HORA_INFRAC', 'hora_infrac', 'Hora']),
+                    infraccion: getValor('Infraccion', ['INFRACCION', 'infraccion', 'Infracción', 'INFRACCIÓN']),
+                    vehiculo: getValor('Vehiculo', ['VEHICULO', 'vehiculo', 'Vehículo', 'VEHÍCULO']),
+                    domicilio_postal: getValor('Domicilio_Postal', ['DOMICILIO_POSTAL', 'domicilio_postal']),
+                    domicilio_inmueble: getValor('Domicilio_Inmueble', ['DOMICILIO_INMUEBLE', 'domicilio_inmueble']),
+                    barrio_inmueble: getValor('Barrio_Inmueble', ['BARRIO_INMUEBLE', 'barrio_inmueble']),
+                    domicilio_juzgado: getValor('Domicilio_Juzgado', ['DOMICILIO_JUZGADO', 'domicilio_juzgado']),
+                    obs: getValor('Obs', ['OBS', 'obs', 'Observaciones', 'OBSERVACIONES']),
+                    carpeta: getValor('Carpeta', ['CARPETA', 'carpeta']),
+                    estado: getValor('Estado', ['ESTADO', 'estado']),
+                    notas_seguimiento: null,
+                    fecha_ultima_actualizacion: new Date().toISOString()
+                };
+            }).filter(row => row.jud_id);
+        }
+        
+        // Vista previa
+        async function mostrarVistaPrevia() {
+            const file = fileInput.files[0];
+            if (!file) {
+                mostrarMensaje('⚠️ Seleccioná un archivo primero', 'error');
+                return;
+            }
+            
+            try {
+                mostrarMensaje('⏳ Cargando vista previa...', 'info');
+                const jsonData = await leerExcel(file);
+                datosExcel = mapearDatos(jsonData);
+                
+                if (datosExcel.length === 0) {
+                    mostrarMensaje('⚠️ No se encontraron datos válidos', 'error');
+                    return;
+                }
+                
+                const columnasDetectadas = Object.keys(jsonData[0]);
+                let html = `<div class="columnas-encontradas">
+                    <strong>📋 Columnas detectadas en Excel:</strong><br>
+                    ${columnasDetectadas.join(', ')}
+                </div>`;
+                
+                html += `<h3>Vista previa (${datosExcel.length} registros totales):</h3>`;
+                html += `<div class="preview"><table>`;
+                
+                const headers = Object.keys(datosExcel[0]);
+                html += '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+                
+                datosExcel.slice(0, 5).forEach(row => {
+                    html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+                });
+                
+                html += '</table></div>';
+                
+                if (datosExcel.length > 5) {
+                    html += `<p><em>... y ${datosExcel.length - 5} registros más</em></p>`;
+                }
+                
+                preview.innerHTML = html;
+                mostrarMensaje(`✅ Vista previa lista. ${datosExcel.length} registros encontrados.`, 'exito');
+                
+            } catch (err) {
+                mostrarMensaje(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        // Cargar datos a Supabase
+        async function cargarDatos() {
+            const file = fileInput.files[0];
+            if (!file) {
+                mostrarMensaje('⚠️ Seleccioná un archivo Excel primero', 'error');
+                return;
+            }
+            
+            cargarBtn.disabled = true;
+            mostrarMensaje('⏳ Procesando archivo...', 'info');
+            
+            try {
+                if (datosExcel.length === 0) {
+                    const jsonData = await leerExcel(file);
+                    datosExcel = mapearDatos(jsonData);
+                }
+                
+                if (datosExcel.length === 0) {
+                    mostrarMensaje('⚠️ No se encontraron datos válidos para cargar', 'error');
+                    cargarBtn.disabled = false;
+                    return;
+                }
+                
+                mostrarMensaje(`⏳ Insertando ${datosExcel.length} registros en Supabase...<br><small>Esto puede tardar unos segundos...</small>`, 'info');
+                
+                const batchSize = 1000;
+                let totalInsertados = 0;
+                
+                for (let i = 0; i < datosExcel.length; i += batchSize) {
+                    const batch = datosExcel.slice(i, i + batchSize);
+                    
+                    const { data, error } = await supabase
+                        .from('deudas')
+                        .insert(batch)
+                        .select();
+                    
+                    if (error) {
+                        throw new Error(`Error en lote ${i/batchSize + 1}: ${error.message}`);
+                    }
+                    
+                    totalInsertados += data.length;
+                    mostrarMensaje(`⏳ Insertados ${totalInsertados} de ${datosExcel.length}...`, 'info');
+                }
+                
+                mostrarMensaje(`✅ ¡ÉXITO! Se cargaron ${totalInsertados} registros en la base de datos.<br>
+                <a href="https://supabase.com/dashboard/project/jigyfagcxaifgdogaduf/editor/17459" target="_blank">Ver en Supabase →</a>`, 'exito');
+                
+                datosExcel = [];
+                preview.innerHTML = '';
+                fileInput.value = '';
+                
+            } catch (err) {
+                console.error('Error completo:', err);
+                mostrarMensaje(`❌ Error: ${err.message}`, 'error');
+            } finally {
+                cargarBtn.disabled = false;
+            }
+        }
+        
+        cargarBtn.addEventListener('click', cargarDatos);
+        vistaPreviaBtn.addEventListener('click', mostrarVistaPrevia);
+        
+        fileInput.addEventListener('change', () => {
+            preview.innerHTML = '';
+            datosExcel = [];
+            mostrarMensaje('📁 Archivo seleccionado. Podés ver "Vista Previa" o directamente "Cargar Datos".', 'info');
+        });
+    </script>
 </body>
 </html>
