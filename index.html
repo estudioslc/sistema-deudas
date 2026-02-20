@@ -177,6 +177,11 @@
         .leyenda strong {
             color: #333;
         }
+        .cargando-texto {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -200,8 +205,9 @@
             
             <div id="statsContainer">
                 <div class="stats-dashboard">
-                    <div class="stat-box total" onclick="verTodas()">
+                    <div class="stat-box total">
                         <div class="loading"></div>
+                        <div class="cargando-texto">Contando causas...</div>
                     </div>
                 </div>
             </div>
@@ -245,30 +251,61 @@
             'B': 'Baja'
         };
 
+        // ==========================================
+        // FUNCIÓN CORREGIDA: Contar todas las causas (más de 1000)
+        // ==========================================
         async function cargarEstadisticas() {
             try {
-                const { data, error } = await supabaseClient
+                // Usar count exacto de Supabase
+                const { count: total, error: countError } = await supabaseClient
                     .from('deudas')
-                    .select('estado');
+                    .select('*', { count: 'exact', head: true });
                 
-                if (error) throw error;
+                if (countError) throw countError;
                 
-                const total = data.length;
+                // Cargar estados en lotes si hay muchas
+                let todosLosEstados = [];
+                let desde = 0;
+                const batchSize = 1000;
+                let hayMas = true;
+                
+                while (hayMas && desde < 10000) {
+                    const { data, error } = await supabaseClient
+                        .from('deudas')
+                        .select('estado')
+                        .range(desde, desde + batchSize - 1);
+                    
+                    if (error) throw error;
+                    
+                    if (data && data.length > 0) {
+                        todosLosEstados = todosLosEstados.concat(data);
+                        if (data.length < batchSize) {
+                            hayMas = false;
+                        } else {
+                            desde += batchSize;
+                        }
+                    } else {
+                        hayMas = false;
+                    }
+                }
+                
+                // Contar por estado
                 const porEstado = {};
-                data.forEach(d => {
+                todosLosEstados.forEach(d => {
                     const est = d.estado || 'Sin';
                     porEstado[est] = (porEstado[est] || 0) + 1;
                 });
                 
+                // Mostrar estadísticas
                 let html = '';
                 
-                // Caja de total (arriba, ancha)
+                // Total real (puede ser más de 1000)
                 html += `<a href="consulta.html?filtro=todos" class="stat-box total">
-                    <div class="stat-number">${total}</div>
+                    <div class="stat-number">${total || todosLosEstados.length}</div>
                     <div class="stat-label">TOTAL CAUSAS (todas las categorías)<br><small>Click para ver todas</small></div>
                 </a>`;
                 
-                // Cajas por estado
+                // Por estado
                 const ordenEstados = ['X', 'D', 'S', 'E', 'C', 'P', 'B'];
                 ordenEstados.forEach(est => {
                     if (porEstado[est]) {
@@ -284,12 +321,14 @@
                 document.getElementById('statsContainer').innerHTML = `<div class="stats-dashboard">${html}</div>`;
                 
             } catch (err) {
-                document.getElementById('statsContainer').innerHTML = '<p style="color: red;">Error cargando estadísticas</p>';
+                document.getElementById('statsContainer').innerHTML = `<div class="stats-dashboard">
+                    <div class="stat-box total" style="background: #dc3545;">
+                        <div class="stat-number">Error</div>
+                        <div class="stat-label">No se pudieron cargar las estadísticas</div>
+                    </div>
+                </div>`;
+                console.error('Error:', err);
             }
-        }
-        
-        function verTodas() {
-            window.location.href = 'consulta.html?filtro=todos';
         }
         
         cargarEstadisticas();
