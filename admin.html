@@ -37,6 +37,7 @@
         
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
         .stat-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .stat-box.baja { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); }
         .stat-number { font-size: 36px; font-weight: bold; margin-bottom: 5px; }
         .stat-label { font-size: 14px; opacity: 0.9; }
         
@@ -45,6 +46,16 @@
         
         .warning-box { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 15px 0; color: #856404; }
         .success-box { background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 15px 0; color: #155724; }
+        
+        .leyenda-estados { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; font-size: 13px; }
+        .estado-tag { padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .estado-X { background: #ffc107; color: #000; }
+        .estado-D { background: #dc3545; color: #fff; }
+        .estado-S { background: #6f42c1; color: #fff; }
+        .estado-E { background: #fd7e14; color: #fff; }
+        .estado-C { background: #20c997; color: #fff; }
+        .estado-P { background: #28a745; color: #fff; }
+        .estado-B { background: #6c757d; color: #fff; }
     </style>
 </head>
 <body>
@@ -54,13 +65,22 @@
         <div class="nav">
             <a href="index.html">🏠 Inicio</a>
             <a href="carga.html">📤 Carga Masiva</a>
-            <a href="consulta.html">🔍 Consulta y Edición</a>
+            <a href="consulta.html">🔍 Consulta</a>
             <a href="admin.html" class="active">⚙️ Administración</a>
         </div>
     </div>
 
     <div class="card">
         <h2>📊 Estadísticas Generales</h2>
+        <div class="leyenda-estados">
+            <span class="estado-tag estado-X">X = Extrajudicial</span>
+            <span class="estado-tag estado-D">D = Con Demanda</span>
+            <span class="estado-tag estado-S">S = Con Sentencia</span>
+            <span class="estado-tag estado-E">E = Ejecución</span>
+            <span class="estado-tag estado-C">C = Con Convenio</span>
+            <span class="estado-tag estado-P">P = Pagadas</span>
+            <span class="estado-tag estado-B">B = Baja</span>
+        </div>
         <div id="statsContainer">
             <div class="stats-grid">
                 <div class="stat-box"><div class="loading"></div></div>
@@ -81,6 +101,7 @@
                 <label><input type="checkbox" id="exp_E" checked> Ejecución (E)</label>
                 <label><input type="checkbox" id="exp_C" checked> Con Convenio (C)</label>
                 <label><input type="checkbox" id="exp_P" checked> Pagadas (P)</label>
+                <label><input type="checkbox" id="exp_B" checked> Bajas (B)</label>
             </div>
         </div>
         
@@ -122,7 +143,8 @@
             'S': 'Con Sentencia',
             'E': 'Ejecución',
             'C': 'Con Convenio',
-            'P': 'Pagadas'
+            'P': 'Pagadas',
+            'B': 'Baja'
         };
 
         async function cargarEstadisticas() {
@@ -143,9 +165,13 @@
                 let html = '<div class="stats-grid">';
                 html += `<div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total Causas</div></div>`;
                 
-                Object.keys(porEstado).sort().forEach(est => {
-                    const nombre = nombresEstado[est] || est;
-                    html += `<div class="stat-box"><div class="stat-number">${porEstado[est]}</div><div class="stat-label">${nombre}</div></div>`;
+                const ordenEstados = ['X', 'D', 'S', 'E', 'C', 'P', 'B'];
+                ordenEstados.forEach(est => {
+                    if (porEstado[est]) {
+                        const nombre = nombresEstado[est];
+                        const esBaja = est === 'B';
+                        html += `<div class="stat-box ${esBaja ? 'baja' : ''}"><div class="stat-number">${porEstado[est]}</div><div class="stat-label">${nombre} (${est})</div></div>`;
+                    }
                 });
                 
                 html += '</div>';
@@ -177,7 +203,7 @@
         
         async function exportarFiltrado() {
             const estadosSeleccionados = [];
-            ['X', 'D', 'S', 'E', 'C', 'P'].forEach(est => {
+            ['X', 'D', 'S', 'E', 'C', 'P', 'B'].forEach(est => {
                 if (document.getElementById(`exp_${est}`).checked) {
                     estadosSeleccionados.push(est);
                 }
@@ -209,7 +235,6 @@
         }
         
         function exportarAExcel(datos, nombreArchivo) {
-            // Formatear datos para Excel
             const datosFormateados = datos.map(d => ({
                 'Jud ID': d.jud_id,
                 'Expediente': d.expediente,
@@ -264,7 +289,7 @@
                 const { error } = await supabaseClient
                     .from('deudas')
                     .delete()
-                    .neq('id', 0); // Eliminar todos
+                    .neq('id', 0);
                 
                 if (error) throw error;
                 
@@ -282,7 +307,6 @@
             div.innerHTML = texto;
         }
         
-        // Cargar estadísticas al iniciar
         cargarEstadisticas();
     </script>
 </body>
