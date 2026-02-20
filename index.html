@@ -51,7 +51,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             text-align: center;
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
         }
         .logo {
@@ -70,24 +70,39 @@
         }
         .stats-dashboard {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
             margin: 40px 0;
         }
         .stat-box {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 25px;
+            padding: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+        }
+        .stat-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .stat-box.total {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            grid-column: 1 / -1;
+        }
+        .stat-box.baja {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
         }
         .stat-number {
-            font-size: 36px;
+            font-size: 32px;
             font-weight: bold;
             margin-bottom: 5px;
         }
         .stat-label {
-            font-size: 14px;
+            font-size: 13px;
             opacity: 0.9;
         }
         .actions {
@@ -118,20 +133,20 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(0,123,255,0.4);
         }
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: #545b62;
-            transform: translateY(-2px);
-        }
         .btn-success {
             background: #28a745;
             color: white;
         }
         .btn-success:hover {
             background: #218838;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
             transform: translateY(-2px);
         }
         .footer {
@@ -151,6 +166,17 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .leyenda {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+        .leyenda strong {
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -174,15 +200,26 @@
             
             <div id="statsContainer">
                 <div class="stats-dashboard">
-                    <div class="stat-box">
+                    <div class="stat-box total" onclick="verTodas()">
                         <div class="loading"></div>
                     </div>
                 </div>
             </div>
 
+            <div class="leyenda">
+                <strong>Estados:</strong> 
+                X = Extrajudicial | 
+                D = Con Demanda | 
+                S = Con Sentencia | 
+                E = Ejecución | 
+                C = Con Convenio | 
+                P = Pagadas | 
+                B = Baja
+            </div>
+
             <div class="actions">
                 <a href="carga.html" class="btn btn-primary">📤 Cargar Nuevas Causas</a>
-                <a href="consulta.html" class="btn btn-success">🔍 Buscar y Editar</a>
+                <a href="consulta.html" class="btn btn-success">🔍 Consultar Causas</a>
                 <a href="admin.html" class="btn btn-secondary">⚙️ Exportar Datos</a>
             </div>
         </div>
@@ -204,7 +241,8 @@
             'S': 'Con Sentencia',
             'E': 'Ejecución',
             'C': 'Con Convenio',
-            'P': 'Pagadas'
+            'P': 'Pagadas',
+            'B': 'Baja'
         };
 
         async function cargarEstadisticas() {
@@ -222,20 +260,36 @@
                     porEstado[est] = (porEstado[est] || 0) + 1;
                 });
                 
-                let html = '<div class="stats-dashboard">';
-                html += `<div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total Causas</div></div>`;
+                let html = '';
                 
-                Object.keys(porEstado).sort().forEach(est => {
-                    const nombre = nombresEstado[est] || est;
-                    html += `<div class="stat-box"><div class="stat-number">${porEstado[est]}</div><div class="stat-label">${nombre}</div></div>`;
+                // Caja de total (arriba, ancha)
+                html += `<a href="consulta.html?filtro=todos" class="stat-box total">
+                    <div class="stat-number">${total}</div>
+                    <div class="stat-label">TOTAL CAUSAS (todas las categorías)<br><small>Click para ver todas</small></div>
+                </a>`;
+                
+                // Cajas por estado
+                const ordenEstados = ['X', 'D', 'S', 'E', 'C', 'P', 'B'];
+                ordenEstados.forEach(est => {
+                    if (porEstado[est]) {
+                        const nombre = nombresEstado[est];
+                        const esBaja = est === 'B';
+                        html += `<a href="consulta.html?filtro=${est}" class="stat-box ${esBaja ? 'baja' : ''}">
+                            <div class="stat-number">${porEstado[est]}</div>
+                            <div class="stat-label">${nombre} (${est})<br><small>Click para ver</small></div>
+                        </a>`;
+                    }
                 });
                 
-                html += '</div>';
-                document.getElementById('statsContainer').innerHTML = html;
+                document.getElementById('statsContainer').innerHTML = `<div class="stats-dashboard">${html}</div>`;
                 
             } catch (err) {
                 document.getElementById('statsContainer').innerHTML = '<p style="color: red;">Error cargando estadísticas</p>';
             }
+        }
+        
+        function verTodas() {
+            window.location.href = 'consulta.html?filtro=todos';
         }
         
         cargarEstadisticas();
