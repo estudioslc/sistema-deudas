@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema LC - Administración</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .nav a { padding: 10px 20px; text-decoration: none; color: #333; background: #e0e0e0; border-radius: 5px; transition: all 0.3s; }
+        .nav a:hover { background: #007bff; color: white; }
+        .nav a.active { background: #007bff; color: white; }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1 { color: #333; margin: 0 0 10px 0; }
+        
+        .export-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
+        .export-card { background: #f8f9fa; padding: 25px; border-radius: 10px; border-left: 4px solid #007bff; }
+        .export-card h3 { margin-bottom: 15px; color: #333; }
+        .export-card p { color: #666; margin-bottom: 15px; font-size: 14px; }
+        
+        button { padding: 12px 24px; background: #28a745; color: white; border: none; cursor: pointer; border-radius: 5px; font-size: 16px; transition: all 0.3s; }
+        button:hover { background: #218838; transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        button.secondary { background: #007bff; }
+        button.secondary:hover { background: #0056b3; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #c82333; }
+        
+        .filtros-export { background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .filtros-export h4 { margin-bottom: 15px; color: #004085; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 15px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .stat-number { font-size: 36px; font-weight: bold; margin-bottom: 5px; }
+        .stat-label { font-size: 14px; opacity: 0.9; }
+        
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .warning-box { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 15px 0; color: #856404; }
+        .success-box { background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 15px 0; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚙️ Administración y Exportación</h1>
+        <p style="color: #666;">Exportá todos los datos a Excel con los cambios realizados</p>
+        <div class="nav">
+            <a href="index.html">🏠 Inicio</a>
+            <a href="carga.html">📤 Carga Masiva</a>
+            <a href="consulta.html">🔍 Consulta y Edición</a>
+            <a href="admin.html" class="active">⚙️ Administración</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📊 Estadísticas Generales</h2>
+        <div id="statsContainer">
+            <div class="stats-grid">
+                <div class="stat-box"><div class="loading"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📥 Exportar Datos a Excel</h2>
+        <p>Exportá todas las causas con los cambios realizados. El archivo incluirá todas las columnas y las ediciones que hiciste.</p>
+        
+        <div class="filtros-export">
+            <h4>Filtrar por estado (opcional):</h4>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="exp_X" checked> Extrajudicial (X)</label>
+                <label><input type="checkbox" id="exp_D" checked> Con Demanda (D)</label>
+                <label><input type="checkbox" id="exp_S" checked> Con Sentencia (S)</label>
+                <label><input type="checkbox" id="exp_E" checked> Ejecución (E)</label>
+                <label><input type="checkbox" id="exp_C" checked> Con Convenio (C)</label>
+                <label><input type="checkbox" id="exp_P" checked> Pagadas (P)</label>
+            </div>
+        </div>
+        
+        <div class="export-options">
+            <div class="export-card">
+                <h3>📄 Exportar Todo</h3>
+                <p>Descargá todas las causas con todos los campos y las ediciones realizadas.</p>
+                <button onclick="exportarTodo()">⬇️ Descargar Excel Completo</button>
+            </div>
+            
+            <div class="export-card" style="border-left-color: #28a745;">
+                <h3>🎯 Exportar por Estado</h3>
+                <p>Descargá solo los estados seleccionados arriba.</p>
+                <button onclick="exportarFiltrado()" class="secondary">⬇️ Descargar Filtrado</button>
+            </div>
+        </div>
+        
+        <div id="mensaje"></div>
+    </div>
+
+    <div class="card">
+        <h2>🗑️ Zona de Peligro</h2>
+        <div class="warning-box">
+            <strong>⚠️ Atención:</strong> Las siguientes acciones son irreversibles. Usalas con precaución.
+        </div>
+        
+        <button class="danger" onclick="eliminarTodo()" style="margin-top: 15px;">🗑️ Eliminar TODAS las causas</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://jigyfagcxaifgdogaduf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTQ1NDcsImV4cCI6MjA4NzA3MDU0N30.zreu5LPBTgmITGiAGrwEAky6RvIaXjFr3E6sXcK0Olw';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const nombresEstado = {
+            'X': 'Extrajudicial',
+            'D': 'Con Demanda',
+            'S': 'Con Sentencia',
+            'E': 'Ejecución',
+            'C': 'Con Convenio',
+            'P': 'Pagadas'
+        };
+
+        async function cargarEstadisticas() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deudas')
+                    .select('estado');
+                
+                if (error) throw error;
+                
+                const total = data.length;
+                const porEstado = {};
+                data.forEach(d => {
+                    const est = d.estado || 'Sin';
+                    porEstado[est] = (porEstado[est] || 0) + 1;
+                });
+                
+                let html = '<div class="stats-grid">';
+                html += `<div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total Causas</div></div>`;
+                
+                Object.keys(porEstado).sort().forEach(est => {
+                    const nombre = nombresEstado[est] || est;
+                    html += `<div class="stat-box"><div class="stat-number">${porEstado[est]}</div><div class="stat-label">${nombre}</div></div>`;
+                });
+                
+                html += '</div>';
+                document.getElementById('statsContainer').innerHTML = html;
+                
+            } catch (err) {
+                document.getElementById('statsContainer').innerHTML = '<p style="color: red;">Error cargando estadísticas</p>';
+            }
+        }
+        
+        async function exportarTodo() {
+            mostrarMensaje('⏳ Cargando datos para exportar...', 'info');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deudas')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                exportarAExcel(data, 'todas_las_causas.xlsx');
+                mostrarMensaje(`✅ Se exportaron ${data.length} causas`, 'success');
+                
+            } catch (err) {
+                mostrarMensaje(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        async function exportarFiltrado() {
+            const estadosSeleccionados = [];
+            ['X', 'D', 'S', 'E', 'C', 'P'].forEach(est => {
+                if (document.getElementById(`exp_${est}`).checked) {
+                    estadosSeleccionados.push(est);
+                }
+            });
+            
+            if (estadosSeleccionados.length === 0) {
+                mostrarMensaje('⚠️ Seleccioná al menos un estado', 'error');
+                return;
+            }
+            
+            mostrarMensaje('⏳ Cargando datos filtrados...', 'info');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deudas')
+                    .select('*')
+                    .in('estado', estadosSeleccionados)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                const nombres = estadosSeleccionados.map(e => nombresEstado[e]).join('_');
+                exportarAExcel(data, `causas_${nombres}.xlsx`);
+                mostrarMensaje(`✅ Se exportaron ${data.length} causas`, 'success');
+                
+            } catch (err) {
+                mostrarMensaje(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        function exportarAExcel(datos, nombreArchivo) {
+            // Formatear datos para Excel
+            const datosFormateados = datos.map(d => ({
+                'Jud ID': d.jud_id,
+                'Expediente': d.expediente,
+                'Carátula': d.caratula,
+                'Nominal': d.nominal,
+                'Accesorios': d.accesorios,
+                'Multa': d.multa,
+                'Obj ID': d.obj_id,
+                'Tipo Obj': d.tipo_obj,
+                'Identificador': d.identificador,
+                'Titular': d.titular,
+                'CUIT': d.cuit,
+                'Teléfono': d.telefono,
+                'Email': d.mail,
+                'Régimen': d.regimen,
+                'Año Fab': d.anio_fab,
+                'Valor Rodado': d.valor_rodado,
+                'Causa': d.causa,
+                'Fecha Infracción': d.fch_infrac,
+                'Hora Infracción': d.hora_infrac,
+                'Infracción': d.infraccion,
+                'Vehículo': d.vehiculo,
+                'Domicilio Postal': d.domicilio_postal,
+                'Domicilio Inmueble': d.domicilio_inmueble,
+                'Barrio Inmueble': d.barrio_inmueble,
+                'Domicilio Juzgado': d.domicilio_juzgado,
+                'Observaciones': d.obs,
+                'Carpeta': d.carpeta,
+                'Estado': d.estado,
+                'Notas Seguimiento': d.notas_seguimiento,
+                'Última Actualización': d.fecha_ultima_actualizacion
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(datosFormateados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Causas');
+            XLSX.writeFile(wb, nombreArchivo);
+        }
+        
+        async function eliminarTodo() {
+            if (!confirm('⚠️ ¿ESTÁS SEGURO?\n\nSe eliminarán TODAS las causas de la base de datos.\n\nEsta acción no se puede deshacer.\n\n¿Continuar?')) {
+                return;
+            }
+            
+            if (!confirm('🚨 ÚLTIMA ADVERTENCIA\n\n¿Realmente querés borrar todo?')) {
+                return;
+            }
+            
+            try {
+                mostrarMensaje('⏳ Eliminando datos...', 'info');
+                
+                const { error } = await supabaseClient
+                    .from('deudas')
+                    .delete()
+                    .neq('id', 0); // Eliminar todos
+                
+                if (error) throw error;
+                
+                mostrarMensaje('✅ Todas las causas fueron eliminadas', 'success');
+                cargarEstadisticas();
+                
+            } catch (err) {
+                mostrarMensaje(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('mensaje');
+            div.className = tipo === 'success' ? 'success-box' : tipo === 'error' ? 'warning-box' : 'info';
+            div.innerHTML = texto;
+        }
+        
+        // Cargar estadísticas al iniciar
+        cargarEstadisticas();
+    </script>
+</body>
+</html>
