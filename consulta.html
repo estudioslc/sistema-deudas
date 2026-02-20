@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Sistema LC - Consulta y Edición</title>
+    <title>Sistema LC - Consulta de Causas</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; }
@@ -28,6 +28,7 @@
         .filtro-btn:hover { border-color: #007bff; }
         .filtro-btn.active { background: #007bff; color: white; border-color: #007bff; }
         .filtro-btn.todos { background: #6c757d; color: white; border-color: #6c757d; }
+        .filtro-btn.baja { background: #495057; color: white; border-color: #495057; }
         
         /* Tabla de resultados */
         .resultados { margin-top: 20px; overflow-x: auto; }
@@ -37,54 +38,45 @@
         tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #e3f2fd; }
         
-        /* Celdas editables */
-        .editable { 
-            background: #fff3cd; 
-            border: 1px dashed #ffc107; 
-            padding: 5px; 
-            cursor: pointer; 
-            min-width: 100px;
-            border-radius: 3px;
-        }
-        .editable:hover { background: #ffeaa7; }
-        .editable-input { 
-            width: 100%; 
-            padding: 5px; 
-            border: 2px solid #007bff; 
-            border-radius: 3px;
-            font-size: 13px;
-        }
-        
         /* Badges de estado */
-        .estado-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
+        .estado-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
         .estado-X { background: #ffc107; color: #000; }
         .estado-D { background: #dc3545; color: #fff; }
         .estado-S { background: #6f42c1; color: #fff; }
         .estado-E { background: #fd7e14; color: #fff; }
         .estado-C { background: #20c997; color: #fff; }
         .estado-P { background: #28a745; color: #fff; }
+        .estado-B { background: #6c757d; color: #fff; }
         
         /* Botones de acción */
         .btn-accion { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin: 2px; }
-        .btn-guardar { background: #28a745; color: white; }
-        .btn-guardar:hover { background: #218838; }
-        .btn-cancelar { background: #6c757d; color: white; }
-        .btn-cancelar:hover { background: #545b62; }
-        .btn-detalle { background: #17a2b8; color: white; }
-        .btn-detalle:hover { background: #138496; }
+        .btn-editar { background: #ffc107; color: #000; }
+        .btn-editar:hover { background: #e0a800; }
+        .btn-ver { background: #17a2b8; color: white; }
+        .btn-ver:hover { background: #138496; }
         
-        /* Modal de detalle */
+        /* Modal de edición */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
         .modal-content { background: white; margin: 30px auto; padding: 30px; max-width: 900px; border-radius: 10px; position: relative; }
         .cerrar { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #999; }
         .cerrar:hover { color: #333; }
         
-        .detalle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
-        .detalle-item { background: #f8f9fa; padding: 15px; border-radius: 8px; }
-        .detalle-label { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
-        .detalle-valor { font-size: 14px; color: #333; word-break: break-word; }
-        .detalle-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; }
-        .detalle-input:focus { border-color: #007bff; outline: none; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
+        .form-group { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+        .form-group label { display: block; font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; 
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
+            border-color: #007bff; outline: none; 
+        }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        
+        .form-actions { margin-top: 20px; text-align: right; display: flex; gap: 10px; justify-content: flex-end; }
+        .btn-guardar { background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-guardar:hover { background: #218838; }
+        .btn-cancelar { background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-cancelar:hover { background: #545b62; }
         
         .stats-bar { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; font-size: 14px; color: #666; }
         .stat-item { background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -95,16 +87,20 @@
         
         .success-msg { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 15px 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; z-index: 2000; }
         .error-msg { background: #dc3545; }
+        
+        .modo-indicador { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 12px; margin-left: 10px; }
+        .modo-consulta { background: #e3f2fd; color: #1976d2; }
+        .modo-edicion { background: #fff3cd; color: #856404; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🔍 Consulta y Edición de Causas</h1>
-        <p style="color: #666;">Buscá y editá cualquier campo. Los cambios se guardan automáticamente en la base de datos.</p>
+        <h1>🔍 Consulta de Causas <span class="modo-indicador modo-consulta">MODO CONSULTA</span></h1>
+        <p style="color: #666;">Buscá causas y hacé click en "Editar" para modificar los datos</p>
         <div class="nav">
             <a href="index.html">🏠 Inicio</a>
             <a href="carga.html">📤 Carga Masiva</a>
-            <a href="consulta.html" class="active">🔍 Consulta y Edición</a>
+            <a href="consulta.html" class="active">🔍 Consulta</a>
             <a href="admin.html">⚙️ Administración</a>
         </div>
     </div>
@@ -116,7 +112,7 @@
             <button onclick="cargarTodas()" style="background: #6c757d;">📋 Ver Todas</button>
         </div>
         
-        <div class="filtros">
+        <div class="filtros" id="filtrosContainer">
             <button class="filtro-btn todos active" onclick="filtrarPorEstado('todos')">Todos</button>
             <button class="filtro-btn" onclick="filtrarPorEstado('X')">Extrajudicial (X)</button>
             <button class="filtro-btn" onclick="filtrarPorEstado('D')">Con Demanda (D)</button>
@@ -124,6 +120,7 @@
             <button class="filtro-btn" onclick="filtrarPorEstado('E')">Ejecución (E)</button>
             <button class="filtro-btn" onclick="filtrarPorEstado('C')">Con Convenio (C)</button>
             <button class="filtro-btn" onclick="filtrarPorEstado('P')">Pagadas (P)</button>
+            <button class="filtro-btn baja" onclick="filtrarPorEstado('B')">Bajas (B)</button>
         </div>
         
         <div class="stats-bar" id="statsBar"></div>
@@ -132,21 +129,17 @@
             <div class="no-resultados">
                 <h3>👋 Bienvenido al sistema de consulta</h3>
                 <p>Escribí un término de búsqueda o hacé click en "Ver Todas" para ver todas las causas.<br>
-                Podés editar cualquier campo haciendo click sobre él.</p>
+                Para editar una causa, buscala primero y luego hacé click en el botón "Editar".</p>
             </div>
         </div>
     </div>
 
-    <!-- Modal de edición completa -->
+    <!-- Modal de edición -->
     <div class="modal" id="modalEdicion">
         <div class="modal-content">
             <span class="cerrar" onclick="cerrarModal()">&times;</span>
-            <h2>✏️ Editar Causa Completa</h2>
+            <h2>✏️ Editar Causa <span class="modo-indicador modo-edicion">MODO EDICIÓN</span></h2>
             <div id="formularioEdicion"></div>
-            <div style="margin-top: 20px; text-align: right;">
-                <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
-                <button class="btn-guardar" onclick="guardarEdicionCompleta()">💾 Guardar Todos los Cambios</button>
-            </div>
         </div>
     </div>
 
@@ -168,21 +161,26 @@
             'S': 'Con Sentencia',
             'E': 'Ejecución de Sentencia',
             'C': 'Con Convenio',
-            'P': 'Pagada'
+            'P': 'Pagada',
+            'B': 'Baja'
         };
-        
-        const camposEditables = [
-            { campo: 'caratula', label: 'Carátula', tipo: 'text' },
-            { campo: 'cuit', label: 'CUIT', tipo: 'text' },
-            { campo: 'titular', label: 'Titular', tipo: 'text' },
-            { campo: 'telefono', label: 'Teléfono', tipo: 'text' },
-            { campo: 'mail', label: 'Email', tipo: 'email' },
-            { campo: 'expediente', label: 'Expediente', tipo: 'text' },
-            { campo: 'estado', label: 'Estado', tipo: 'select', opciones: ['X', 'D', 'S', 'E', 'C', 'P'] },
-            { campo: 'domicilio_postal', label: 'Domicilio Postal', tipo: 'text' },
-            { campo: 'obs', label: 'Observaciones', tipo: 'textarea' },
-            { campo: 'notas_seguimiento', label: 'Notas de Seguimiento', tipo: 'textarea' }
-        ];
+
+        // Verificar si viene filtro de la URL
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const filtro = urlParams.get('filtro');
+            if (filtro) {
+                estadoFiltroActual = filtro;
+                // Actualizar botón activo
+                document.querySelectorAll('.filtro-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.textContent.includes(filtro) || (filtro === 'todos' && btn.classList.contains('todos'))) {
+                        btn.classList.add('active');
+                    }
+                });
+                cargarTodas();
+            }
+        };
         
         // ==========================================
         // BÚSQUEDA
@@ -241,14 +239,14 @@
         }
         
         // ==========================================
-        // MOSTRAR RESULTADOS EN TABLA EDITABLE
+        // MOSTRAR RESULTADOS (SOLO CONSULTA)
         // ==========================================
         
         function mostrarResultadosTabla(causas) {
             const resultadosDiv = document.getElementById('resultados');
             
             if (causas.length === 0) {
-                resultadosDiv.innerHTML = '<div class="no-resultados">😕 No se encontraron causas</div>';
+                resultadosDiv.innerHTML = '<div class="no-resultados">😕 No se encontraron causas con ese criterio</div>';
                 return;
             }
             
@@ -273,14 +271,15 @@
                 
                 html += `<tr>
                     <td><strong>${causa.causa || '-'}</strong></td>
-                    <td class="editable" onclick="editarCelda(${causa.id}, 'caratula', '${escapeHtml(causa.caratula || '')}')">${causa.caratula || '-'}</td>
-                    <td class="editable" onclick="editarCelda(${causa.id}, 'cuit', '${escapeHtml(causa.cuit || '')}')">${causa.cuit || '-'}</td>
-                    <td class="editable" onclick="editarCelda(${causa.id}, 'titular', '${escapeHtml(causa.titular || '')}')">${causa.titular || '-'}</td>
-                    <td class="editable" onclick="editarCelda(${causa.id}, 'telefono', '${escapeHtml(causa.telefono || '')}')">${causa.telefono || '-'}</td>
-                    <td class="editable" onclick="editarCelda(${causa.id}, 'mail', '${escapeHtml(causa.mail || '')}')">${causa.mail || '-'}</td>
-                    <td><span class="estado-badge ${estadoClass}" onclick="cambiarEstado(${causa.id}, '${causa.estado}')">${estadoNombre}</span></td>
+                    <td>${causa.caratula || '-'}</td>
+                    <td>${causa.cuit || '-'}</td>
+                    <td>${causa.titular || '-'}</td>
+                    <td>${causa.telefono || '-'}</td>
+                    <td>${causa.mail || '-'}</td>
+                    <td><span class="estado-badge ${estadoClass}">${estadoNombre}</span></td>
                     <td>
-                        <button class="btn-accion btn-detalle" onclick="abrirEdicionCompleta(${causa.id})">✏️ Editar Todo</button>
+                        <button class="btn-accion btn-ver" onclick="verDetalle(${causa.id})">👁️ Ver</button>
+                        <button class="btn-accion btn-editar" onclick="abrirEdicion(${causa.id})">✏️ Editar</button>
                     </td>
                 </tr>`;
             });
@@ -289,128 +288,172 @@
             resultadosDiv.innerHTML = html;
         }
         
-        function escapeHtml(text) {
-            return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        // ==========================================
+        // VER DETALLE (SOLO LECTURA)
+        // ==========================================
+        
+        async function verDetalle(id) {
+            const causa = causasActuales.find(c => c.id === id);
+            if (!causa) return;
+            
+            const modal = document.getElementById('modalEdicion');
+            const formulario = document.getElementById('formularioEdicion');
+            
+            const estadoNombre = nombresEstado[causa.estado] || causa.estado || 'Sin';
+            const estadoClass = causa.estado ? `estado-${causa.estado}` : '';
+            
+            let html = `
+                <div style="margin-bottom: 20px;">
+                    <span class="estado-badge ${estadoClass}" style="font-size: 14px; padding: 8px 16px;">${estadoNombre}</span>
+                </div>
+                <div class="form-grid" style="pointer-events: none; opacity: 0.8;">
+                    <div class="form-group">
+                        <label>Causa</label>
+                        <input type="text" value="${causa.causa || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Jud ID</label>
+                        <input type="text" value="${causa.jud_id || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Expediente</label>
+                        <input type="text" value="${causa.expediente || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Carátula</label>
+                        <input type="text" value="${causa.caratula || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Titular</label>
+                        <input type="text" value="${causa.titular || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>CUIT</label>
+                        <input type="text" value="${causa.cuit || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" value="${causa.telefono || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="text" value="${causa.mail || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Domicilio Postal</label>
+                        <input type="text" value="${causa.domicilio_postal || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <textarea readonly>${causa.obs || ''}</textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1; background: #fff3cd;">
+                        <label>Notas de Seguimiento</label>
+                        <textarea readonly>${causa.notas_seguimiento || 'Sin notas'}</textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancelar" onclick="cerrarModal()">Cerrar</button>
+                    <button type="button" class="btn-editar" onclick="abrirEdicion(${causa.id})" style="background: #ffc107; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">✏️ Pasar a Modo Edición</button>
+                </div>
+            `;
+            
+            formulario.innerHTML = html;
+            modal.style.display = 'block';
         }
         
         // ==========================================
-        // EDICIÓN INLINE DE CELDAS
+        // EDICIÓN
         // ==========================================
         
-        async function editarCelda(id, campo, valorActual) {
-            const nuevoValor = prompt(`Editar ${campo}:`, valorActual);
-            if (nuevoValor === null) return; // Canceló
-            
-            try {
-                const { error } = await supabaseClient
-                    .from('deudas')
-                    .update({ 
-                        [campo]: nuevoValor,
-                        fecha_ultima_actualizacion: new Date().toISOString()
-                    })
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                mostrarSuccess(`✓ ${campo} actualizado`);
-                
-                // Recargar solo si estamos viendo todas
-                const termino = document.getElementById('busquedaInput').value.trim();
-                await buscarEnSupabase(termino);
-                
-            } catch (err) {
-                alert('❌ Error al guardar: ' + err.message);
-            }
-        }
-        
-        async function cambiarEstado(id, estadoActual) {
-            const estados = ['X', 'D', 'S', 'E', 'C', 'P'];
-            const opciones = estados.map(e => `${e} = ${nombresEstado[e]}`).join('\n');
-            const nuevoEstado = prompt(`Estado actual: ${estadoActual}\n\nNuevo estado:\n${opciones}`, estadoActual);
-            
-            if (!nuevoEstado || !estados.includes(nuevoEstado)) return;
-            
-            try {
-                const { error } = await supabaseClient
-                    .from('deudas')
-                    .update({ 
-                        estado: nuevoEstado,
-                        fecha_ultima_actualizacion: new Date().toISOString()
-                    })
-                    .eq('id', id);
-                
-                if (error) throw error;
-                
-                mostrarSuccess('✓ Estado actualizado');
-                
-                const termino = document.getElementById('busquedaInput').value.trim();
-                await buscarEnSupabase(termino);
-                
-            } catch (err) {
-                alert('❌ Error: ' + err.message);
-            }
-        }
-        
-        // ==========================================
-        // EDICIÓN COMPLETA (MODAL)
-        // ==========================================
-        
-        async function abrirEdicionCompleta(id) {
+        async function abrirEdicion(id) {
             causaEditando = causasActuales.find(c => c.id === id);
             if (!causaEditando) return;
             
             const modal = document.getElementById('modalEdicion');
             const formulario = document.getElementById('formularioEdicion');
             
-            let html = '<div class="detalle-grid">';
+            const estados = ['X', 'D', 'S', 'E', 'C', 'P', 'B'];
             
-            camposEditables.forEach(campo => {
-                const valor = causaEditando[campo.campo] || '';
-                
-                html += `<div class="detalle-item">
-                    <div class="detalle-label">${campo.label}</div>`;
-                
-                if (campo.tipo === 'select') {
-                    html += `<select class="detalle-input" id="edit_${campo.campo}">
-                        ${campo.opciones.map(op => `<option value="${op}" ${valor === op ? 'selected' : ''}>${op} - ${nombresEstado[op]}</option>`).join('')}
-                    </select>`;
-                } else if (campo.tipo === 'textarea') {
-                    html += `<textarea class="detalle-input" id="edit_${campo.campo}" rows="3">${valor}</textarea>`;
-                } else {
-                    html += `<input type="${campo.tipo}" class="detalle-input" id="edit_${campo.campo}" value="${valor}">`;
-                }
-                
-                html += '</div>';
-            });
-            
-            // Campos de solo lectura
-            html += `<div class="detalle-item" style="background: #e9ecef;">
-                <div class="detalle-label">Causa (no editable)</div>
-                <div class="detalle-valor">${causaEditando.causa || '-'}</div>
-            </div>`;
-            
-            html += `<div class="detalle-item" style="background: #e9ecef;">
-                <div class="detalle-label">Jud ID (no editable)</div>
-                <div class="detalle-valor">${causaEditando.jud_id || '-'}</div>
-            </div>`;
-            
-            html += '</div>';
+            let html = `
+                <div class="form-grid">
+                    <div class="form-group" style="background: #e9ecef;">
+                        <label>Causa (no editable)</label>
+                        <input type="text" value="${causaEditando.causa || ''}" readonly style="background: #e9ecef;">
+                    </div>
+                    <div class="form-group" style="background: #e9ecef;">
+                        <label>Jud ID (no editable)</label>
+                        <input type="text" value="${causaEditando.jud_id || ''}" readonly style="background: #e9ecef;">
+                    </div>
+                    <div class="form-group">
+                        <label>Expediente</label>
+                        <input type="text" id="edit_expediente" value="${causaEditando.expediente || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Carátula</label>
+                        <input type="text" id="edit_caratula" value="${causaEditando.caratula || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Titular</label>
+                        <input type="text" id="edit_titular" value="${causaEditando.titular || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>CUIT</label>
+                        <input type="text" id="edit_cuit" value="${causaEditando.cuit || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" id="edit_telefono" value="${causaEditando.telefono || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="edit_mail" value="${causaEditando.mail || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="edit_estado">
+                            ${estados.map(est => `<option value="${est}" ${causaEditando.estado === est ? 'selected' : ''}>${est} - ${nombresEstado[est]}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Domicilio Postal</label>
+                        <input type="text" id="edit_domicilio_postal" value="${causaEditando.domicilio_postal || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <textarea id="edit_obs">${causaEditando.obs || ''}</textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1; background: #fff3cd;">
+                        <label>Notas de Seguimiento</label>
+                        <textarea id="edit_notas_seguimiento">${causaEditando.notas_seguimiento || ''}</textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+                    <button type="button" class="btn-guardar" onclick="guardarEdicion()">💾 Guardar Cambios</button>
+                </div>
+            `;
             
             formulario.innerHTML = html;
             modal.style.display = 'block';
         }
         
-        async function guardarEdicionCompleta() {
+        async function guardarEdicion() {
             if (!causaEditando) return;
             
-            const cambios = {};
-            camposEditables.forEach(campo => {
-                const elemento = document.getElementById(`edit_${campo.campo}`);
-                if (elemento) {
-                    cambios[campo.campo] = elemento.value;
-                }
-            });
-            cambios.fecha_ultima_actualizacion = new Date().toISOString();
+            const cambios = {
+                expediente: document.getElementById('edit_expediente').value,
+                caratula: document.getElementById('edit_caratula').value,
+                titular: document.getElementById('edit_titular').value,
+                cuit: document.getElementById('edit_cuit').value,
+                telefono: document.getElementById('edit_telefono').value,
+                mail: document.getElementById('edit_mail').value,
+                estado: document.getElementById('edit_estado').value,
+                domicilio_postal: document.getElementById('edit_domicilio_postal').value,
+                obs: document.getElementById('edit_obs').value,
+                notas_seguimiento: document.getElementById('edit_notas_seguimiento').value,
+                fecha_ultima_actualizacion: new Date().toISOString()
+            };
             
             try {
                 const { error } = await supabaseClient
@@ -420,9 +463,10 @@
                 
                 if (error) throw error;
                 
-                mostrarSuccess('✓ Todos los cambios guardados');
+                mostrarSuccess('✓ Cambios guardados correctamente');
                 cerrarModal();
                 
+                // Recargar tabla
                 const termino = document.getElementById('busquedaInput').value.trim();
                 await buscarEnSupabase(termino);
                 
