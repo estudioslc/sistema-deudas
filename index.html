@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema LC - Gestión de Deudas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            color: white;
+        }
+        .nav { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .nav a { 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            color: white; 
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px; 
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .nav a:hover { 
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .welcome-card {
+            background: white;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        .logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 20px;
+            margin-bottom: 40px;
+        }
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,123,255,0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        .footer {
+            background: rgba(0,0,0,0.2);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 14px;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <h2 style="font-size: 24px;">⚖️ Estudio LC</h2>
+            <div class="nav">
+                <a href="index.html" style="background: rgba(255,255,255,0.4);">🏠 Inicio</a>
+                <a href="carga.html">📤 Carga Masiva</a>
+                <a href="consulta.html">🔍 Consulta</a>
+                <a href="admin.html">⚙️ Administración</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="welcome-card">
+            <div class="logo">🏛️</div>
+            <h1>¡Bienvenidos al Sistema LC!</h1>
+            <p class="subtitle">Sistema de Gestión de Deudas Municipales</p>
+            
+            <div id="statsContainer">
+                <div class="stats-dashboard">
+                    <div class="stat-box">
+                        <div class="loading"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <a href="carga.html" class="btn btn-primary">📤 Cargar Nuevas Causas</a>
+                <a href="consulta.html" class="btn btn-success">🔍 Buscar y Editar</a>
+                <a href="admin.html" class="btn btn-secondary">⚙️ Exportar Datos</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2025 Estudio LC - Sistema de Gestión de Deudas | Datos almacenados en Supabase
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://jigyfagcxaifgdogaduf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTQ1NDcsImV4cCI6MjA4NzA3MDU0N30.zreu5LPBTgmITGiAGrwEAky6RvIaXjFr3E6sXcK0Olw';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const nombresEstado = {
+            'X': 'Extrajudicial',
+            'D': 'Con Demanda',
+            'S': 'Con Sentencia',
+            'E': 'Ejecución',
+            'C': 'Con Convenio',
+            'P': 'Pagadas'
+        };
+
+        async function cargarEstadisticas() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deudas')
+                    .select('estado');
+                
+                if (error) throw error;
+                
+                const total = data.length;
+                const porEstado = {};
+                data.forEach(d => {
+                    const est = d.estado || 'Sin';
+                    porEstado[est] = (porEstado[est] || 0) + 1;
+                });
+                
+                let html = '<div class="stats-dashboard">';
+                html += `<div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total Causas</div></div>`;
+                
+                Object.keys(porEstado).sort().forEach(est => {
+                    const nombre = nombresEstado[est] || est;
+                    html += `<div class="stat-box"><div class="stat-number">${porEstado[est]}</div><div class="stat-label">${nombre}</div></div>`;
+                });
+                
+                html += '</div>';
+                document.getElementById('statsContainer').innerHTML = html;
+                
+            } catch (err) {
+                document.getElementById('statsContainer').innerHTML = '<p style="color: red;">Error cargando estadísticas</p>';
+            }
+        }
+        
+        cargarEstadisticas();
+    </script>
+</body>
+</html>
