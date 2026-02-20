@@ -214,6 +214,7 @@
                     query = query.eq('estado', estadoFiltroActual);
                 }
                 
+                // LÍNEA CORREGIDA: Límite aumentado a 5000
                 query = query.order('created_at', { ascending: false }).limit(5000);
                 
                 const { data, error } = await query;
