@@ -2,34 +2,80 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Sistema de Deudas</title>
+    <title>Sistema de Deudas - Carga</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }
-        button { padding: 12px 24px; background: #007bff; color: white; border: none; cursor: pointer; margin: 10px 5px; border-radius: 5px; font-size: 16px; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav { display: flex; gap: 10px; margin-top: 15px; }
+        .nav a { padding: 10px 20px; text-decoration: none; color: #333; background: #e0e0e0; border-radius: 5px; transition: all 0.3s; }
+        .nav a:hover { background: #007bff; color: white; }
+        .nav a.active { background: #007bff; color: white; }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1 { color: #333; margin: 0 0 10px 0; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        button { padding: 12px 24px; background: #007bff; color: white; border: none; cursor: pointer; margin: 10px 5px; border-radius: 5px; font-size: 16px; transition: background 0.3s; }
         button:hover { background: #0056b3; }
         button:disabled { background: #ccc; cursor: not-allowed; }
-        .exito { color: #155724; background: #d4edda; padding: 15px; border-radius: 5px; border: 1px solid #c3e6cb; }
-        .error { color: #721c24; background: #f8d7da; padding: 15px; border-radius: 5px; border: 1px solid #f5c6cb; }
-        .info { color: #856404; background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeaa7; }
-        .preview { margin-top: 20px; overflow-x: auto; }
-        table { border-collapse: collapse; width: 100%; font-size: 12px; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #545b62; }
+        input[type="file"] { padding: 10px; border: 2px dashed #ccc; border-radius: 5px; width: 100%; max-width: 400px; }
+        .exito { color: #155724; background: #d4edda; padding: 15px; border-radius: 5px; border: 1px solid #c3e6cb; margin: 10px 0; }
+        .error { color: #721c24; background: #f8d7da; padding: 15px; border-radius: 5px; border: 1px solid #f5c6cb; margin: 10px 0; }
+        .info { color: #856404; background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeaa7; margin: 10px 0; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-box { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid #007bff; }
+        .stat-number { font-size: 32px; font-weight: bold; color: #007bff; }
+        .stat-label { color: #666; margin-top: 5px; }
+        .preview { margin-top: 20px; overflow-x: auto; max-height: 400px; overflow-y: auto; }
+        table { border-collapse: collapse; width: 100%; font-size: 12px; background: white; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: bold; }
+        th { background-color: #007bff; color: white; font-weight: bold; position: sticky; top: 0; }
         tr:nth-child(even) { background-color: #f9f9f9; }
-        .columnas-encontradas { background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 12px; }
+        tr:hover { background-color: #f1f1f1; }
+        .columnas-encontradas { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 12px; border-left: 4px solid #007bff; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .estado-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .estado-X { background: #ffc107; color: #000; }
+        .estado-D { background: #dc3545; color: #fff; }
+        .estado-S { background: #6f42c1; color: #fff; }
+        .estado-E { background: #fd7e14; color: #fff; }
+        .estado-C { background: #20c997; color: #fff; }
+        .estado-P { background: #28a745; color: #fff; }
     </style>
 </head>
 <body>
-    <h1>📁 Cargar Deudas desde Excel</h1>
-    
-    <input type="file" id="fileInput" accept=".xlsx,.xls" />
-    <button id="cargarBtn">Cargar Datos</button>
-    <button id="vistaPreviaBtn" style="background: #6c757d;">Vista Previa</button>
-    
-    <div id="mensaje"></div>
-    <div id="preview"></div>
+    <div class="header">
+        <h1>📁 Sistema de Gestión de Deudas</h1>
+        <p class="subtitle">Estudio LC - Gestión de causas municipales</p>
+        <div class="nav">
+            <a href="index.html" class="active">📤 Carga Masiva</a>
+            <a href="consulta.html">🔍 Consulta</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Cargar Causas desde Excel</h2>
+        <p>Seleccioná el archivo Excel con todas las causas (soporta hasta 2500 registros)</p>
+        
+        <input type="file" id="fileInput" accept=".xlsx,.xls" />
+        <div style="margin-top: 15px;">
+            <button id="cargarBtn">🚀 Cargar Datos</button>
+            <button id="vistaPreviaBtn" class="secondary">👁️ Vista Previa</button>
+            <button id="verEstadisticasBtn" class="secondary">📊 Ver Estadísticas</button>
+        </div>
+        
+        <div id="mensaje"></div>
+        <div id="preview"></div>
+    </div>
+
+    <div class="card" id="estadisticasCard" style="display: none;">
+        <h3>📊 Estadísticas de la Base de Datos</h3>
+        <div id="statsContainer"></div>
+    </div>
 
     <script>
         // ==========================================
@@ -38,14 +84,16 @@
         const SUPABASE_URL = 'https://jigyfagcxaifgdogaduf.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTQ1NDcsImV4cCI6MjA4NzA3MDU0N30.zreu5LPBTgmITGiAGrwEAky6RvIaXjFr3E6sXcK0Olw';
         
-        // USAMOS 'supabaseClient' EN LUGAR DE 'supabase' PARA EVITAR CONFLICTO
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         const fileInput = document.getElementById('fileInput');
         const cargarBtn = document.getElementById('cargarBtn');
         const vistaPreviaBtn = document.getElementById('vistaPreviaBtn');
+        const verEstadisticasBtn = document.getElementById('verEstadisticasBtn');
         const mensaje = document.getElementById('mensaje');
         const preview = document.getElementById('preview');
+        const estadisticasCard = document.getElementById('estadisticasCard');
+        const statsContainer = document.getElementById('statsContainer');
         
         let datosExcel = [];
         
@@ -75,7 +123,7 @@
         
         // Mapear datos del Excel a la estructura de Supabase
         function mapearDatos(jsonData) {
-            return jsonData.map((row, index) => {
+            return jsonData.map((row) => {
                 const getValor = (nombreExacto, alternativas = []) => {
                     if (row[nombreExacto] !== undefined) return row[nombreExacto];
                     for (let alt of alternativas) {
@@ -119,7 +167,7 @@
                     obs: getValor('Obs', ['OBS', 'obs', 'Observaciones', 'OBSERVACIONES']),
                     carpeta: getValor('Carpeta', ['CARPETA', 'carpeta']),
                     estado: getValor('Estado', ['ESTADO', 'estado']),
-                    notas_seguimiento: null,
+                    notas_seguimiento: '',
                     fecha_ultima_actualizacion: new Date().toISOString()
                 };
             }).filter(row => row.jud_id);
@@ -145,18 +193,24 @@
                 
                 const columnasDetectadas = Object.keys(jsonData[0]);
                 let html = `<div class="columnas-encontradas">
-                    <strong>📋 Columnas detectadas en Excel:</strong><br>
-                    ${columnasDetectadas.join(', ')}
+                    <strong>📋 Columnas detectadas en Excel:</strong> ${columnasDetectadas.join(', ')}<br>
+                    <strong>📊 Registros válidos:</strong> ${datosExcel.length}
                 </div>`;
                 
-                html += `<h3>Vista previa (${datosExcel.length} registros totales):</h3>`;
+                html += `<h4>Vista previa (primeras 5 filas):</h4>`;
                 html += `<div class="preview"><table>`;
                 
-                const headers = Object.keys(datosExcel[0]);
+                const headers = ['jud_id', 'expediente', 'caratula', 'titular', 'cuit', 'estado'];
                 html += '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
                 
                 datosExcel.slice(0, 5).forEach(row => {
-                    html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+                    const estadoClass = row.estado ? `estado-${row.estado}` : '';
+                    html += '<tr>' + headers.map(h => {
+                        if (h === 'estado' && row[h]) {
+                            return `<td><span class="estado-badge ${estadoClass}">${row[h]}</span></td>`;
+                        }
+                        return `<td>${row[h] || '-'}</td>`;
+                    }).join('') + '</tr>';
                 });
                 
                 html += '</table></div>';
@@ -182,7 +236,7 @@
             }
             
             cargarBtn.disabled = true;
-            mostrarMensaje('⏳ Procesando archivo...', 'info');
+            mostrarMensaje('⏳ Procesando archivo... <span class="loading"></span>', 'info');
             
             try {
                 if (datosExcel.length === 0) {
@@ -196,7 +250,7 @@
                     return;
                 }
                 
-                mostrarMensaje(`⏳ Insertando ${datosExcel.length} registros en Supabase...<br><small>Esto puede tardar unos segundos...</small>`, 'info');
+                mostrarMensaje(`⏳ Insertando ${datosExcel.length} registros en Supabase...<br><small>Esto puede tardar unos segundos...</small> <span class="loading"></span>`, 'info');
                 
                 const batchSize = 1000;
                 let totalInsertados = 0;
@@ -204,22 +258,21 @@
                 for (let i = 0; i < datosExcel.length; i += batchSize) {
                     const batch = datosExcel.slice(i, i + batchSize);
                     
-                    // USAMOS 'supabaseClient' EN LUGAR DE 'supabase'
                     const { data, error } = await supabaseClient
                         .from('deudas')
                         .insert(batch)
                         .select();
                     
                     if (error) {
-                        throw new Error(`Error en lote ${i/batchSize + 1}: ${error.message}`);
+                        throw new Error(`Error en lote ${Math.floor(i/batchSize) + 1}: ${error.message}`);
                     }
                     
                     totalInsertados += data.length;
-                    mostrarMensaje(`⏳ Insertados ${totalInsertados} de ${datosExcel.length}...`, 'info');
+                    mostrarMensaje(`⏳ Insertados ${totalInsertados} de ${datosExcel.length}... <span class="loading"></span>`, 'info');
                 }
                 
-                mostrarMensaje(`✅ ¡ÉXITO! Se cargaron ${totalInsertados} registros en la base de datos.<br>
-                <a href="https://supabase.com/dashboard/project/jigyfagcxaifgdogaduf/editor/17459" target="_blank">Ver en Supabase →</a>`, 'exito');
+                mostrarMensaje(`✅ ¡ÉXITO! Se cargaron ${totalInsertados} registros.<br>
+                <a href="https://supabase.com/dashboard/project/jigyfagcxaifgdogaduf/editor/17459" target="_blank" style="color: #155724; font-weight: bold;">Ver en Supabase →</a>`, 'exito');
                 
                 datosExcel = [];
                 preview.innerHTML = '';
@@ -233,8 +286,58 @@
             }
         }
         
+        // Ver estadísticas
+        async function verEstadisticas() {
+            mostrarMensaje('⏳ Cargando estadísticas...', 'info');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deudas')
+                    .select('estado');
+                
+                if (error) throw error;
+                
+                const total = data.length;
+                const porEstado = {};
+                data.forEach(d => {
+                    const est = d.estado || 'Sin estado';
+                    porEstado[est] = (porEstado[est] || 0) + 1;
+                });
+                
+                const nombresEstado = {
+                    'X': 'Extrajudicial',
+                    'D': 'Con Demanda',
+                    'S': 'Con Sentencia',
+                    'E': 'Ejecución',
+                    'C': 'Con Convenio',
+                    'P': 'Pagadas'
+                };
+                
+                let html = '<div class="stats">';
+                html += `<div class="stat-box"><div class="stat-number">${total}</div><div class="stat-label">Total Causas</div></div>`;
+                
+                Object.keys(porEstado).sort().forEach(est => {
+                    const nombre = nombresEstado[est] || est;
+                    const porcentaje = ((porEstado[est] / total) * 100).toFixed(1);
+                    html += `<div class="stat-box">
+                        <div class="stat-number">${porEstado[est]}</div>
+                        <div class="stat-label">${nombre} (${est})<br><small>${porcentaje}%</small></div>
+                    </div>`;
+                });
+                
+                html += '</div>';
+                statsContainer.innerHTML = html;
+                estadisticasCard.style.display = 'block';
+                mostrarMensaje('✅ Estadísticas cargadas', 'exito');
+                
+            } catch (err) {
+                mostrarMensaje(`❌ Error: ${err.message}`, 'error');
+            }
+        }
+        
         cargarBtn.addEventListener('click', cargarDatos);
         vistaPreviaBtn.addEventListener('click', mostrarVistaPrevia);
+        verEstadisticasBtn.addEventListener('click', verEstadisticas);
         
         fileInput.addEventListener('change', () => {
             preview.innerHTML = '';
