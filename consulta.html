@@ -15,14 +15,11 @@
         .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         h1 { color: #333; margin: 0 0 10px 0; }
         
-        /* Búsqueda */
         .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .search-box input { flex: 1; min-width: 300px; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; }
-        .search-box input:focus { outline: none; border-color: #007bff; }
         .search-box button { padding: 12px 30px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
         .search-box button:hover { background: #0056b3; }
         
-        /* Filtros */
         .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
         .filtro-btn { padding: 8px 16px; border: 2px solid #ddd; background: white; border-radius: 20px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
         .filtro-btn:hover { border-color: #007bff; }
@@ -30,7 +27,6 @@
         .filtro-btn.todos { background: #6c757d; color: white; border-color: #6c757d; }
         .filtro-btn.baja { background: #495057; color: white; border-color: #495057; }
         
-        /* Tabla de resultados */
         .resultados { margin-top: 20px; overflow-x: auto; }
         table { border-collapse: collapse; width: 100%; font-size: 13px; background: white; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
@@ -38,7 +34,6 @@
         tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #e3f2fd; }
         
-        /* Badges de estado */
         .estado-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
         .estado-X { background: #ffc107; color: #000; }
         .estado-D { background: #dc3545; color: #fff; }
@@ -48,14 +43,10 @@
         .estado-P { background: #28a745; color: #fff; }
         .estado-B { background: #6c757d; color: #fff; }
         
-        /* Botones de acción */
         .btn-accion { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin: 2px; }
         .btn-editar { background: #ffc107; color: #000; }
-        .btn-editar:hover { background: #e0a800; }
         .btn-ver { background: #17a2b8; color: white; }
-        .btn-ver:hover { background: #138496; }
         
-        /* Modal de edición */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
         .modal-content { background: white; margin: 30px auto; padding: 30px; max-width: 900px; border-radius: 10px; position: relative; }
         .cerrar { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #999; }
@@ -64,19 +55,12 @@
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
         .form-group { background: #f8f9fa; padding: 15px; border-radius: 8px; }
         .form-group label { display: block; font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
-        .form-group input, .form-group select, .form-group textarea { 
-            width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; 
-        }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
-            border-color: #007bff; outline: none; 
-        }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
         .form-group textarea { resize: vertical; min-height: 60px; }
         
         .form-actions { margin-top: 20px; text-align: right; display: flex; gap: 10px; justify-content: flex-end; }
         .btn-guardar { background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
-        .btn-guardar:hover { background: #218838; }
         .btn-cancelar { background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
-        .btn-cancelar:hover { background: #545b62; }
         
         .stats-bar { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; font-size: 14px; color: #666; }
         .stat-item { background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -91,6 +75,8 @@
         .modo-indicador { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 12px; margin-left: 10px; }
         .modo-consulta { background: #e3f2fd; color: #1976d2; }
         .modo-edicion { background: #fff3cd; color: #856404; }
+        
+        .cargando-mas { text-align: center; padding: 20px; color: #666; }
     </style>
 </head>
 <body>
@@ -128,13 +114,11 @@
         <div class="resultados" id="resultados">
             <div class="no-resultados">
                 <h3>👋 Bienvenido al sistema de consulta</h3>
-                <p>Escribí un término de búsqueda o hacé click en "Ver Todas" para ver todas las causas.<br>
-                Para editar una causa, buscala primero y luego hacé click en el botón "Editar".</p>
+                <p>Escribí un término de búsqueda o hacé click en "Ver Todas" para ver todas las causas.</p>
             </div>
         </div>
     </div>
 
-    <!-- Modal de edición -->
     <div class="modal" id="modalEdicion">
         <div class="modal-content">
             <span class="cerrar" onclick="cerrarModal()">&times;</span>
@@ -165,13 +149,11 @@
             'B': 'Baja'
         };
 
-        // Verificar si viene filtro de la URL
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const filtro = urlParams.get('filtro');
             if (filtro) {
                 estadoFiltroActual = filtro;
-                // Actualizar botón activo
                 document.querySelectorAll('.filtro-btn').forEach(btn => {
                     btn.classList.remove('active');
                     if (btn.textContent.includes(filtro) || (filtro === 'todos' && btn.classList.contains('todos'))) {
@@ -181,10 +163,6 @@
                 cargarTodas();
             }
         };
-        
-        // ==========================================
-        // BÚSQUEDA
-        // ==========================================
         
         async function realizarBusqueda() {
             const termino = document.getElementById('busquedaInput').value.trim();
@@ -199,29 +177,54 @@
             await buscarEnSupabase('');
         }
         
+        // ==========================================
+        // FUNCIÓN CORREGIDA: Carga paginada para más de 1000 registros
+        // ==========================================
         async function buscarEnSupabase(termino) {
             const resultadosDiv = document.getElementById('resultados');
-            resultadosDiv.innerHTML = '<div class="no-resultados"><div class="loading"></div> Cargando...</div>';
+            resultadosDiv.innerHTML = '<div class="no-resultados"><div class="loading"></div> Cargando datos...</div>';
             
             try {
-                let query = supabaseClient.from('deudas').select('*');
+                let todosLosDatos = [];
+                let desde = 0;
+                const batchSize = 1000; // Límite de Supabase
+                let hayMasDatos = true;
+                let batchNum = 1;
                 
-                if (termino) {
-                    query = query.or(`causa.ilike.%${termino}%,titular.ilike.%${termino}%,cuit.ilike.%${termino}%,expediente.ilike.%${termino}%,caratula.ilike.%${termino}%`);
+                // Cargar en lotes de 1000 hasta traer todo
+                while (hayMasDatos && batchNum <= 10) { // Máximo 10.000 registros (10 batches)
+                    let query = supabaseClient.from('deudas').select('*');
+                    
+                    if (termino) {
+                        query = query.or(`causa.ilike.%${termino}%,titular.ilike.%${termino}%,cuit.ilike.%${termino}%,expediente.ilike.%${termino}%,caratula.ilike.%${termino}%`);
+                    }
+                    
+                    if (estadoFiltroActual !== 'todos') {
+                        query = query.eq('estado', estadoFiltroActual);
+                    }
+                    
+                    query = query.order('created_at', { ascending: false }).range(desde, desde + batchSize - 1);
+                    
+                    const { data, error } = await query;
+                    
+                    if (error) throw error;
+                    
+                    if (data && data.length > 0) {
+                        todosLosDatos = todosLosDatos.concat(data);
+                        resultadosDiv.innerHTML = `<div class="no-resultados"><div class="loading"></div> Cargando... ${todosLosDatos.length} causas encontradas</div>`;
+                        
+                        if (data.length < batchSize) {
+                            hayMasDatos = false; // Ya no hay más
+                        } else {
+                            desde += batchSize;
+                            batchNum++;
+                        }
+                    } else {
+                        hayMasDatos = false; // No hay más datos
+                    }
                 }
                 
-                if (estadoFiltroActual !== 'todos') {
-                    query = query.eq('estado', estadoFiltroActual);
-                }
-                
-                // LÍNEA CORREGIDA: Límite aumentado a 5000
-                query = query.order('created_at', { ascending: false }).limit(5000);
-                
-                const { data, error } = await query;
-                
-                if (error) throw error;
-                
-                causasActuales = data || [];
+                causasActuales = todosLosDatos;
                 mostrarResultadosTabla(causasActuales);
                 actualizarStats(causasActuales);
                 
@@ -239,15 +242,11 @@
             buscarEnSupabase(termino);
         }
         
-        // ==========================================
-        // MOSTRAR RESULTADOS (SOLO CONSULTA)
-        // ==========================================
-        
         function mostrarResultadosTabla(causas) {
             const resultadosDiv = document.getElementById('resultados');
             
             if (causas.length === 0) {
-                resultadosDiv.innerHTML = '<div class="no-resultados">😕 No se encontraron causas con ese criterio</div>';
+                resultadosDiv.innerHTML = '<div class="no-resultados">😕 No se encontraron causas</div>';
                 return;
             }
             
@@ -289,10 +288,6 @@
             resultadosDiv.innerHTML = html;
         }
         
-        // ==========================================
-        // VER DETALLE (SOLO LECTURA)
-        // ==========================================
-        
         async function verDetalle(id) {
             const causa = causasActuales.find(c => c.id === id);
             if (!causa) return;
@@ -308,50 +303,17 @@
                     <span class="estado-badge ${estadoClass}" style="font-size: 14px; padding: 8px 16px;">${estadoNombre}</span>
                 </div>
                 <div class="form-grid" style="pointer-events: none; opacity: 0.8;">
-                    <div class="form-group">
-                        <label>Causa</label>
-                        <input type="text" value="${causa.causa || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Jud ID</label>
-                        <input type="text" value="${causa.jud_id || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Expediente</label>
-                        <input type="text" value="${causa.expediente || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Carátula</label>
-                        <input type="text" value="${causa.caratula || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Titular</label>
-                        <input type="text" value="${causa.titular || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>CUIT</label>
-                        <input type="text" value="${causa.cuit || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Teléfono</label>
-                        <input type="text" value="${causa.telefono || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="text" value="${causa.mail || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Domicilio Postal</label>
-                        <input type="text" value="${causa.domicilio_postal || ''}" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones</label>
-                        <textarea readonly>${causa.obs || ''}</textarea>
-                    </div>
-                    <div class="form-group" style="grid-column: 1 / -1; background: #fff3cd;">
-                        <label>Notas de Seguimiento</label>
-                        <textarea readonly>${causa.notas_seguimiento || 'Sin notas'}</textarea>
-                    </div>
+                    <div class="form-group"><label>Causa</label><input type="text" value="${causa.causa || ''}" readonly></div>
+                    <div class="form-group"><label>Jud ID</label><input type="text" value="${causa.jud_id || ''}" readonly></div>
+                    <div class="form-group"><label>Expediente</label><input type="text" value="${causa.expediente || ''}" readonly></div>
+                    <div class="form-group"><label>Carátula</label><input type="text" value="${causa.caratula || ''}" readonly></div>
+                    <div class="form-group"><label>Titular</label><input type="text" value="${causa.titular || ''}" readonly></div>
+                    <div class="form-group"><label>CUIT</label><input type="text" value="${causa.cuit || ''}" readonly></div>
+                    <div class="form-group"><label>Teléfono</label><input type="text" value="${causa.telefono || ''}" readonly></div>
+                    <div class="form-group"><label>Email</label><input type="text" value="${causa.mail || ''}" readonly></div>
+                    <div class="form-group"><label>Domicilio Postal</label><input type="text" value="${causa.domicilio_postal || ''}" readonly></div>
+                    <div class="form-group"><label>Observaciones</label><textarea readonly>${causa.obs || ''}</textarea></div>
+                    <div class="form-group" style="grid-column: 1 / -1; background: #fff3cd;"><label>Notas de Seguimiento</label><textarea readonly>${causa.notas_seguimiento || 'Sin notas'}</textarea></div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-cancelar" onclick="cerrarModal()">Cerrar</button>
@@ -362,10 +324,6 @@
             formulario.innerHTML = html;
             modal.style.display = 'block';
         }
-        
-        // ==========================================
-        // EDICIÓN
-        // ==========================================
         
         async function abrirEdicion(id) {
             causaEditando = causasActuales.find(c => c.id === id);
@@ -378,56 +336,18 @@
             
             let html = `
                 <div class="form-grid">
-                    <div class="form-group" style="background: #e9ecef;">
-                        <label>Causa (no editable)</label>
-                        <input type="text" value="${causaEditando.causa || ''}" readonly style="background: #e9ecef;">
-                    </div>
-                    <div class="form-group" style="background: #e9ecef;">
-                        <label>Jud ID (no editable)</label>
-                        <input type="text" value="${causaEditando.jud_id || ''}" readonly style="background: #e9ecef;">
-                    </div>
-                    <div class="form-group">
-                        <label>Expediente</label>
-                        <input type="text" id="edit_expediente" value="${causaEditando.expediente || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Carátula</label>
-                        <input type="text" id="edit_caratula" value="${causaEditando.caratula || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Titular</label>
-                        <input type="text" id="edit_titular" value="${causaEditando.titular || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>CUIT</label>
-                        <input type="text" id="edit_cuit" value="${causaEditando.cuit || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Teléfono</label>
-                        <input type="text" id="edit_telefono" value="${causaEditando.telefono || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="edit_mail" value="${causaEditando.mail || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Estado</label>
-                        <select id="edit_estado">
-                            ${estados.map(est => `<option value="${est}" ${causaEditando.estado === est ? 'selected' : ''}>${est} - ${nombresEstado[est]}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Domicilio Postal</label>
-                        <input type="text" id="edit_domicilio_postal" value="${causaEditando.domicilio_postal || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones</label>
-                        <textarea id="edit_obs">${causaEditando.obs || ''}</textarea>
-                    </div>
-                    <div class="form-group" style="grid-column: 1 / -1; background: #fff3cd;">
-                        <label>Notas de Seguimiento</label>
-                        <textarea id="edit_notas_seguimiento">${causaEditando.notas_seguimiento || ''}</textarea>
-                    </div>
+                    <div class="form-group" style="background: #e9ecef;"><label>Causa (no editable)</label><input type="text" value="${causaEditando.causa || ''}" readonly style="background: #e9ecef;"></div>
+                    <div class="form-group" style="background: #e9ecef;"><label>Jud ID (no editable)</label><input type="text" value="${causaEditando.jud_id || ''}" readonly style="background: #e9ecef;"></div>
+                    <div class="form-group"><label>Expediente</label><input type="text" id="edit_expediente" value="${causaEditando.expediente || ''}"></div>
+                    <div class="form-group"><label>Carátula</label><input type="text" id="edit_caratula" value="${causaEditando.caratula || ''}"></div>
+                    <div class="form-group"><label>Titular</label><input type="text" id="edit_titular" value="${causaEditando.titular || ''}"></div>
+                    <div class="form-group"><label>CUIT</label><input type="text" id="edit_cuit" value="${causaEditando.cuit || ''}"></div>
+                    <div class="form-group"><label>Teléfono</label><input type="text" id="edit_telefono" value="${causaEditando.telefono || ''}"></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="edit_mail" value="${causaEditando.mail || ''}"></div>
+                    <div class="form-group"><label>Estado</label><select id="edit_estado">${estados.map(est => `<option value="${est}" ${causaEditando.estado === est ? 'selected' : ''}>${est} - ${nombresEstado[est]}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>Domicilio Postal</label><input type="text" id="edit_domicilio_postal" value="${causaEditando.domicilio_postal || ''}"></div>
+                    <div class="form-group"><label>Observaciones</label><textarea id="edit_obs">${causaEditando.obs || ''}</textarea></div>
+                    <div class="form-group" style="grid-column: 1 / -1; background: #fff3cd;"><label>Notas de Seguimiento</label><textarea id="edit_notas_seguimiento">${causaEditando.notas_seguimiento || ''}</textarea></div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
@@ -457,17 +377,12 @@
             };
             
             try {
-                const { error } = await supabaseClient
-                    .from('deudas')
-                    .update(cambios)
-                    .eq('id', causaEditando.id);
-                
+                const { error } = await supabaseClient.from('deudas').update(cambios).eq('id', causaEditando.id);
                 if (error) throw error;
                 
                 mostrarSuccess('✓ Cambios guardados correctamente');
                 cerrarModal();
                 
-                // Recargar tabla
                 const termino = document.getElementById('busquedaInput').value.trim();
                 await buscarEnSupabase(termino);
                 
@@ -480,10 +395,6 @@
             document.getElementById('modalEdicion').style.display = 'none';
             causaEditando = null;
         }
-        
-        // ==========================================
-        // UTILIDADES
-        // ==========================================
         
         function actualizarStats(causas) {
             const statsBar = document.getElementById('statsBar');
@@ -518,7 +429,6 @@
             }, 3000);
         }
         
-        // Event listeners
         document.getElementById('busquedaInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') realizarBusqueda();
         });
