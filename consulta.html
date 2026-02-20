@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Deudas - Consulta</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .nav { display: flex; gap: 10px; margin-top: 15px; }
+        .nav a { padding: 10px 20px; text-decoration: none; color: #333; background: #e0e0e0; border-radius: 5px; transition: all 0.3s; }
+        .nav a:hover { background: #007bff; color: white; }
+        .nav a.active { background: #007bff; color: white; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1 { color: #333; margin: 0 0 10px 0; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        
+        /* Búsqueda */
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .search-box input { flex: 1; min-width: 200px; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; }
+        .search-box input:focus { outline: none; border-color: #007bff; }
+        .search-box button { padding: 12px 30px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .search-box button:hover { background: #0056b3; }
+        
+        /* Filtros de estado */
+        .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .filtro-btn { padding: 8px 16px; border: 2px solid #ddd; background: white; border-radius: 20px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .filtro-btn:hover { border-color: #007bff; }
+        .filtro-btn.active { background: #007bff; color: white; border-color: #007bff; }
+        .filtro-btn.todos { background: #6c757d; color: white; border-color: #6c757d; }
+        
+        /* Resultados */
+        .resultados { margin-top: 20px; }
+        .causa-card { background: #f8f9fa; border-left: 4px solid #007bff; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .causa-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .causa-titulo { font-size: 18px; font-weight: bold; color: #333; }
+        .estado-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .estado-X { background: #ffc107; color: #000; }
+        .estado-D { background: #dc3545; color: #fff; }
+        .estado-S { background: #6f42c1; color: #fff; }
+        .estado-E { background: #fd7e14; color: #fff; }
+        .estado-C { background: #20c997; color: #fff; }
+        .estado-P { background: #28a745; color: #fff; }
+        
+        .datos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .dato { background: white; padding: 10px; border-radius: 5px; }
+        .dato-label { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+        .dato-valor { font-size: 14px; font-weight: 600; color: #333; }
+        
+        .acciones { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-accion { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-ver-mas { background: #17a2b8; color: white; }
+        .btn-ver-mas:hover { background: #138496; }
+        .btn-editar { background: #ffc107; color: #000; }
+        .btn-editar:hover { background: #e0a800; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; }
+        .modal-content { background: white; margin: 50px auto; padding: 30px; max-width: 800px; border-radius: 10px; position: relative; max-height: 90vh; overflow-y: auto; }
+        .cerrar { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #999; }
+        .cerrar:hover { color: #333; }
+        
+        .detalle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
+        .detalle-item { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+        .detalle-label { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
+        .detalle-valor { font-size: 14px; color: #333; word-break: break-word; }
+        
+        /* Configuración */
+        .config-panel { background: #e7f3ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .config-panel.visible { display: block; }
+        .config-title { font-weight: bold; margin-bottom: 15px; color: #004085; }
+        .config-opciones { display: flex; flex-wrap: wrap; gap: 15px; }
+        .config-opcion { display: flex; align-items: center; gap: 8px; }
+        .config-opcion input[type="checkbox"] { width: 18px; height: 18px; }
+        
+        .btn-config { background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 15px; }
+        .btn-config:hover { background: #545b62; }
+        
+        .no-resultados { text-align: center; padding: 40px; color: #666; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .stats-bar { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; font-size: 14px; color: #666; }
+        .stat-item { background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Consulta de Causas</h1>
+        <p class="subtitle">Estudio LC - Búsqueda de deudas municipales</p>
+        <div class="nav">
+            <a href="index.html">📤 Carga Masiva</a>
+            <a href="consulta.html" class="active">🔍 Consulta</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="search-box">
+            <input type="text" id="busquedaInput" placeholder="Buscar por causa (AUT/123/2024), CUIT, titular, expediente..." />
+            <button onclick="realizarBusqueda()">🔍 Buscar</button>
+        </div>
+        
+        <button class="btn-config" onclick="toggleConfig()">⚙️ Configurar Vista</button>
+        
+        <div class="config-panel" id="configPanel">
+            <div class="config-title">Seleccionar campos a mostrar en resultados:</div>
+            <div class="config-opciones">
+                <label class="config-opcion"><input type="checkbox" id="cfg_caratura" checked> Carátula</label>
+                <label class="config-opcion"><input type="checkbox" id="cfg_cuit" checked> CUIT</label>
+                <label class="config-opcion"><input type="checkbox" id="cfg_expediente" checked> Expediente</label>
+                <label class="config-opcion"><input type="checkbox" id="cfg_estado" checked> Estado</label>
+                <label class="config-opcion"><input type="checkbox" id="cfg_titular"> Titular completo</label>
+                <label class="config-opcion"><input type="checkbox" id="cfg_telefono"> Teléfono</label>
+                <label class="config-opcion"><input type="checkbox" id="cfg_mail"> Email</label>
+                <label class="config-opcion"><input type="checkbox" id="cfg_nominal"> Nominal</label>
+            </div>
+        </div>
+        
+        <div class="filtros">
+            <button class="filtro-btn todos active" onclick="filtrarPorEstado('todos')">Todos</button>
+            <button class="filtro-btn" onclick="filtrarPorEstado('X')">Extrajudicial (X)</button>
+            <button class="filtro-btn" onclick="filtrarPorEstado('D')">Con Demanda (D)</button>
+            <button class="filtro-btn" onclick="filtrarPorEstado('S')">Con Sentencia (S)</button>
+            <button class="filtro-btn" onclick="filtrarPorEstado('E')">Ejecución (E)</button>
+            <button class="filtro-btn" onclick="filtrarPorEstado('C')">Con Convenio (C)</button>
+            <button class="filtro-btn" onclick="filtrarPorEstado('P')">Pagadas (P)</button>
+        </div>
+        
+        <div class="stats-bar" id="statsBar"></div>
+        
+        <div class="resultados" id="resultados">
+            <div class="no-resultados">
+                <h3>👋 Bienvenido al sistema de consulta</h3>
+                <p>Escribí un número de causa, CUIT o nombre del titular para buscar.<br>
+                Podés filtrar por estado usando los botones de arriba.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de detalle -->
+    <div class="modal" id="modalDetalle">
+        <div class="modal-content">
+            <span class="cerrar" onclick="cerrarModal()">&times;</span>
+            <h2>📋 Detalle Completo de la Causa</h2>
+            <div id="detalleContenido"></div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN SUPABASE
+        // ==========================================
+        const SUPABASE_URL = 'https://jigyfagcxaifgdogaduf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTQ1NDcsImV4cCI6MjA4NzA3MDU0N30.zreu5LPBTgmITGiAGrwEAky6RvIaXjFr3E6sXcK0Olw';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let causasActuales = [];
+        let estadoFiltroActual = 'todos';
+        
+        const nombresEstado = {
+            'X': 'Extrajudicial',
+            'D': 'Con Demanda',
+            'S': 'Con Sentencia',
+            'E': 'Ejecución de Sentencia',
+            'C': 'Con Convenio',
+            'P': 'Pagada'
+        };
+        
+        // ==========================================
+        // FUNCIONES DE BÚSQUEDA
+        // ==========================================
+        
+        async function realizarBusqueda() {
+            const termino = document.getElementById('busquedaInput').value.trim();
+            const resultadosDiv = document.getElementById('resultados');
+            
+            if (!termino) {
+                resultadosDiv.innerHTML = '<div class="no-resultados">⚠️ Ingresá un término de búsqueda</div>';
+                return;
+            }
+            
+            resultadosDiv.innerHTML = '<div class="no-resultados"><div class="loading"></div> Buscando...</div>';
+            
+            try {
+                let query = supabaseClient.from('deudas').select('*');
+                
+                // Si el término parece un CUIT (solo números y guiones)
+                if (termino.includes('-') || /^\d+$/.test(termino)) {
+                    query = query.or(`cuit.ilike.%${termino}%,causa.ilike.%${termino}%,expediente.ilike.%${termino}%`);
+                } else {
+                    // Búsqueda más amplia
+                    query = query.or(`causa.ilike.%${termino}%,titular.ilike.%${termino}%,expediente.ilike.%${termino}%,jud_id.ilike.%${termino}%`);
+                }
+                
+                const { data, error } = await query.limit(100);
+                
+                if (error) throw error;
+                
+                causasActuales = data || [];
+                
+                // Aplicar filtro de estado si está activo
+                if (estadoFiltroActual !== 'todos') {
+                    causasActuales = causasActuales.filter(c => c.estado === estadoFiltroActual);
+                }
+                
+                mostrarResultados(causasActuales);
+                actualizarStats(causasActuales);
+                
+            } catch (err) {
+                console.error('Error:', err);
+                resultadosDiv.innerHTML = `<div class="no-resultados">❌ Error: ${err.message}</div>`;
+            }
+        }
+        
+        function filtrarPorEstado(estado) {
+            estadoFiltroActual = estado;
+            
+            // Actualizar botones
+            document.querySelectorAll('.filtro-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Si hay búsqueda activa, re-filtrar
+            if (causasActuales.length > 0) {
+                realizarBusqueda();
+            }
+        }
+        
+        // ==========================================
+        // MOSTRAR RESULTADOS
+        // ==========================================
+        
+        function mostrarResultados(causas) {
+            const resultadosDiv = document.getElementById('resultados');
+            
+            if (causas.length === 0) {
+                resultadosDiv.innerHTML = '<div class="no-resultados">😕 No se encontraron causas con ese criterio</div>';
+                return;
+            }
+            
+            // Leer configuración
+            const config = {
+                caratura: document.getElementById('cfg_caratura').checked,
+                cuit: document.getElementById('cfg_cuit').checked,
+                expediente: document.getElementById('cfg_expediente').checked,
+                estado: document.getElementById('cfg_estado').checked,
+                titular: document.getElementById('cfg_titular').checked,
+                telefono: document.getElementById('cfg_telefono').checked,
+                mail: document.getElementById('cfg_mail').checked,
+                nominal: document.getElementById('cfg_nominal').checked
+            };
+            
+            let html = '';
+            causas.forEach(causa => {
+                const estadoClass = causa.estado ? `estado-${causa.estado}` : '';
+                const estadoNombre = nombresEstado[causa.estado] || causa.estado || 'Sin estado';
+                
+                html += `<div class="causa-card">
+                    <div class="causa-header">
+                        <div class="causa-titulo">${causa.causa || 'Sin causa'}</div>
+                        ${config.estado ? `<span class="estado-badge ${estadoClass}">${estadoNombre}</span>` : ''}
+                    </div>
+                    
+                    <div class="datos-grid">`;
+                
+                if (config.caratura && causa.caratula) {
+                    html += `<div class="dato"><div class="dato-label">Carátula</div><div class="dato-valor">${causa.caratula}</div></div>`;
+                }
+                if (config.cuit && causa.cuit) {
+                    html += `<div class="dato"><div class="dato-label">CUIT</div><div class="dato-valor">${causa.cuit}</div></div>`;
+                }
+                if (config.expediente && causa.expediente) {
+                    html += `<div class="dato"><div class="dato-label">Expediente</div><div class="dato-valor">${causa.expediente}</div></div>`;
+                }
+                if (config.titular && causa.titular) {
+                    html += `<div class="dato"><div class="dato-label">Titular</div><div class="dato-valor">${causa.titular}</div></div>`;
+                }
+                if (config.telefono && causa.telefono) {
+                    html += `<div class="dato"><div class="dato-label">Teléfono</div><div class="dato-valor">${causa.telefono}</div></div>`;
+                }
+                if (config.mail && causa.mail) {
+                    html += `<div class="dato"><div class="dato-label">Email</div><div class="dato-valor">${causa.mail}</div></div>`;
+                }
+                if (config.nominal && causa.nominal) {
+                    html += `<div class="dato"><div class="dato-label">Nominal</div><div class="dato-valor">$${causa.nominal}</div></div>`;
+                }
+                
+                html += `</div>
+                    
+                    <div class="acciones">
+                        <button class="btn-accion btn-ver-mas" onclick="verDetalle(${causa.id})">📋 Ver más datos</button>
+                        <button class="btn-accion btn-editar" onclick="editarCausa(${causa.id})">✏️ Editar</button>
+                    </div>
+                </div>`;
+            });
+            
+            resultadosDiv.innerHTML = html;
+        }
+        
+        function actualizarStats(causas) {
+            const statsBar = document.getElementById('statsBar');
+            const porEstado = {};
+            causas.forEach(c => {
+                porEstado[c.estado || 'Sin'] = (porEstado[c.estado || 'Sin'] || 0) + 1;
+            });
+            
+            let html = `<div class="stat-item"><strong>Total:</strong> ${causas.length}</div>`;
+            Object.keys(porEstado).sort().forEach(est => {
+                html += `<div class="stat-item">${nombresEstado[est] || est}: ${porEstado[est]}</div>`;
+            });
+            
+            statsBar.innerHTML = html;
+        }
+        
+        // ==========================================
+        // VER DETALLE
+        // ==========================================
+        
+        async function verDetalle(id) {
+            const modal = document.getElementById('modalDetalle');
+            const contenido = document.getElementById('detalleContenido');
+            
+            modal.style.display = 'block';
+            contenido.innerHTML = '<div class="loading"></div> Cargando...';
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deudas')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+                
+                if (error) throw error;
+                
+                const estadoNombre = nombresEstado[data.estado] || data.estado || 'Sin estado';
+                const estadoClass = data.estado ? `estado-${data.estado}` : '';
+                
+                let html = `
+                    <div style="margin-bottom: 20px;">
+                        <span class="estado-badge ${estadoClass}" style="font-size: 14px; padding: 8px 16px;">${estadoNombre}</span>
+                    </div>
+                    
+                    <div class="detalle-grid">
+                        <div class="detalle-item">
+                            <div class="detalle-label">Causa</div>
+                            <div class="detalle-valor">${data.causa || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Jud ID</div>
+                            <div class="detalle-valor">${data.jud_id || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Expediente</div>
+                            <div class="detalle-valor">${data.expediente || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Carátula</div>
+                            <div class="detalle-valor">${data.caratula || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Titular</div>
+                            <div class="detalle-valor">${data.titular || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">CUIT</div>
+                            <div class="detalle-valor">${data.cuit || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Teléfono</div>
+                            <div class="detalle-valor">${data.telefono || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Email</div>
+                            <div class="detalle-valor">${data.mail || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Nominal</div>
+                            <div class="detalle-valor">${data.nominal ? '$' + data.nominal : '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Accesorios</div>
+                            <div class="detalle-valor">${data.accesorios ? '$' + data.accesorios : '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Multa</div>
+                            <div class="detalle-valor">${data.multa ? '$' + data.multa : '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Objeto ID</div>
+                            <div class="detalle-valor">${data.obj_id || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Tipo Objeto</div>
+                            <div class="detalle-valor">${data.tipo_obj || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Identificador</div>
+                            <div class="detalle-valor">${data.identificador || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Régimen</div>
+                            <div class="detalle-valor">${data.regimen || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Año Fab.</div>
+                            <div class="detalle-valor">${data.anio_fab || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Valor Rodado</div>
+                            <div class="detalle-valor">${data.valor_rodado ? '$' + data.valor_rodado : '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Fecha Infracción</div>
+                            <div class="detalle-valor">${data.fch_infrac || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Hora Infracción</div>
+                            <div class="detalle-valor">${data.hora_infrac || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Infracción</div>
+                            <div class="detalle-valor">${data.infraccion || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Vehículo</div>
+                            <div class="detalle-valor">${data.vehiculo || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Domicilio Postal</div>
+                            <div class="detalle-valor">${data.domicilio_postal || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Domicilio Inmueble</div>
+                            <div class="detalle-valor">${data.domicilio_inmueble || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Barrio Inmueble</div>
+                            <div class="detalle-valor">${data.barrio_inmueble || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Domicilio Juzgado</div>
+                            <div class="detalle-valor">${data.domicilio_juzgado || '-'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Carpeta</div>
+                            <div class="detalle-valor">${data.carpeta || '-'}</div>
+                        </div>
+                        <div class="detalle-item" style="grid-column: 1 / -1;">
+                            <div class="detalle-label">Observaciones</div>
+                            <div class="detalle-valor">${data.obs || '-'}</div>
+                        </div>
+                        <div class="detalle-item" style="grid-column: 1 / -1; background: #fff3cd;">
+                            <div class="detalle-label">Notas de Seguimiento</div>
+                            <div class="detalle-valor">${data.notas_seguimiento || 'Sin notas'}</div>
+                        </div>
+                    </div>
+                `;
+                
+                contenido.innerHTML = html;
+                
+            } catch (err) {
+                contenido.innerHTML = `<div class="error">Error cargando detalle: ${err.message}</div>`;
+            }
+        }
+        
+        function cerrarModal() {
+            document.getElementById('modalDetalle').style.display = 'none';
+        }
+        
+        // ==========================================
+        // EDITAR CAUSA
+        // ==========================================
+        
+        async function editarCausa(id) {
+            const notas = prompt('Ingresá las notas de seguimiento para esta causa:');
+            if (notas === null) return; // Canceló
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('deudas')
+                    .update({ 
+                        notas_seguimiento: notas,
+                        fecha_ultima_actualizacion: new Date().toISOString()
+                    })
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                alert('✅ Notas guardadas correctamente');
+                realizarBusqueda(); // Recargar
+                
+            } catch (err) {
+                alert('❌ Error: ' + err.message);
+            }
+        }
+        
+        // ==========================================
+        // CONFIGURACIÓN
+        // ==========================================
+        
+        function toggleConfig() {
+            const panel = document.getElementById('configPanel');
+            panel.classList.toggle('visible');
+        }
+        
+        // Cerrar modal al hacer click fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalDetalle');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Buscar al presionar Enter
+        document.getElementById('busquedaInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                realizarBusqueda();
+            }
+        });
+    </script>
+</body>
+</html>
