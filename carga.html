@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Sistema de Deudas - Carga</title>
+    <title>Sistema LC - Carga Masiva</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
         .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .nav { display: flex; gap: 10px; margin-top: 15px; }
+        .nav { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         .nav a { padding: 10px 20px; text-decoration: none; color: #333; background: #e0e0e0; border-radius: 5px; transition: all 0.3s; }
         .nav a:hover { background: #007bff; color: white; }
         .nav a.active { background: #007bff; color: white; }
@@ -21,6 +21,8 @@
         button:disabled { background: #ccc; cursor: not-allowed; }
         button.secondary { background: #6c757d; }
         button.secondary:hover { background: #545b62; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #c82333; }
         input[type="file"] { padding: 10px; border: 2px dashed #ccc; border-radius: 5px; width: 100%; max-width: 400px; }
         .exito { color: #155724; background: #d4edda; padding: 15px; border-radius: 5px; border: 1px solid #c3e6cb; margin: 10px 0; }
         .error { color: #721c24; background: #f8d7da; padding: 15px; border-radius: 5px; border: 1px solid #f5c6cb; margin: 10px 0; }
@@ -45,21 +47,29 @@
         .estado-E { background: #fd7e14; color: #fff; }
         .estado-C { background: #20c997; color: #fff; }
         .estado-P { background: #28a745; color: #fff; }
+        .warning-box { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 15px 0; color: #856404; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📁 Sistema de Gestión de Deudas</h1>
-        <p class="subtitle">Estudio LC - Gestión de causas municipales</p>
+        <h1>⚖️ Estudio LC - Sistema de Gestión</h1>
+        <p class="subtitle">Carga masiva de causas desde Excel</p>
         <div class="nav">
-            <a href="index.html" class="active">📤 Carga Masiva</a>
-            <a href="consulta.html">🔍 Consulta</a>
+            <a href="index.html">🏠 Inicio</a>
+            <a href="carga.html" class="active">📤 Carga Masiva</a>
+            <a href="consulta.html">🔍 Consulta y Edición</a>
+            <a href="admin.html">⚙️ Administración</a>
         </div>
     </div>
 
     <div class="card">
-        <h2>Cargar Causas desde Excel</h2>
-        <p>Seleccioná el archivo Excel con todas las causas (soporta hasta 2500 registros)</p>
+        <h2>📁 Cargar Causas desde Excel</h2>
+        <p>Seleccioná el archivo Excel con las causas. El sistema detecta automáticamente si hay registros duplicados.</p>
+        
+        <div class="warning-box">
+            <strong>⚠️ Importante:</strong> Los datos se guardan permanentemente en la base de datos. 
+            Podés cargar nuevas causas o actualizar las existentes. Para editar causas ya cargadas, usá la sección "Consulta y Edición".
+        </div>
         
         <input type="file" id="fileInput" accept=".xlsx,.xls" />
         <div style="margin-top: 15px;">
@@ -78,9 +88,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // CONFIGURACIÓN SUPABASE
-        // ==========================================
         const SUPABASE_URL = 'https://jigyfagcxaifgdogaduf.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZ3lmYWdjeGFpZmdkb2dhZHVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTQ1NDcsImV4cCI6MjA4NzA3MDU0N30.zreu5LPBTgmITGiAGrwEAky6RvIaXjFr3E6sXcK0Olw';
         
@@ -101,7 +108,6 @@
             mensaje.innerHTML = `<div class="${tipo}">${texto}</div>`;
         }
         
-        // Función para leer el Excel
         function leerExcel(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -121,7 +127,6 @@
             });
         }
         
-        // Mapear datos del Excel a la estructura de Supabase
         function mapearDatos(jsonData) {
             return jsonData.map((row) => {
                 const getValor = (nombreExacto, alternativas = []) => {
@@ -173,7 +178,6 @@
             }).filter(row => row.jud_id);
         }
         
-        // Vista previa
         async function mostrarVistaPrevia() {
             const file = fileInput.files[0];
             if (!file) {
@@ -193,7 +197,7 @@
                 
                 const columnasDetectadas = Object.keys(jsonData[0]);
                 let html = `<div class="columnas-encontradas">
-                    <strong>📋 Columnas detectadas en Excel:</strong> ${columnasDetectadas.join(', ')}<br>
+                    <strong>📋 Columnas detectadas:</strong> ${columnasDetectadas.join(', ')}<br>
                     <strong>📊 Registros válidos:</strong> ${datosExcel.length}
                 </div>`;
                 
@@ -227,7 +231,6 @@
             }
         }
         
-        // Cargar datos a Supabase
         async function cargarDatos() {
             const file = fileInput.files[0];
             if (!file) {
@@ -250,7 +253,7 @@
                     return;
                 }
                 
-                mostrarMensaje(`⏳ Insertando ${datosExcel.length} registros en Supabase...<br><small>Esto puede tardar unos segundos...</small> <span class="loading"></span>`, 'info');
+                mostrarMensaje(`⏳ Insertando ${datosExcel.length} registros...<br><small>Esto puede tardar unos segundos...</small> <span class="loading"></span>`, 'info');
                 
                 const batchSize = 1000;
                 let totalInsertados = 0;
@@ -272,7 +275,7 @@
                 }
                 
                 mostrarMensaje(`✅ ¡ÉXITO! Se cargaron ${totalInsertados} registros.<br>
-                <a href="https://supabase.com/dashboard/project/jigyfagcxaifgdogaduf/editor/17459" target="_blank" style="color: #155724; font-weight: bold;">Ver en Supabase →</a>`, 'exito');
+                <a href="consulta.html" style="color: #155724; font-weight: bold;">Ir a Consulta →</a>`, 'exito');
                 
                 datosExcel = [];
                 preview.innerHTML = '';
@@ -286,7 +289,6 @@
             }
         }
         
-        // Ver estadísticas
         async function verEstadisticas() {
             mostrarMensaje('⏳ Cargando estadísticas...', 'info');
             
@@ -342,7 +344,7 @@
         fileInput.addEventListener('change', () => {
             preview.innerHTML = '';
             datosExcel = [];
-            mostrarMensaje('📁 Archivo seleccionado. Podés ver "Vista Previa" o directamente "Cargar Datos".', 'info');
+            mostrarMensaje('📁 Archivo seleccionado. Podés ver "Vista Previa" o "Cargar Datos".', 'info');
         });
     </script>
 </body>
